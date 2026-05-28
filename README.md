@@ -64,4 +64,16 @@ npm install
 npm run dev
 ```
 
-Voir [`we
+Voir [`web/README.md`](web/README.md) pour le détail.
+
+## Contrat de format
+
+Le workflow qui génère les digests **doit** respecter le format décrit dans [`DIGEST_FORMAT.md`](DIGEST_FORMAT.md) pour que l'app les indexe correctement.
+
+## Versionnement
+
+Chaque digest matinal est commité localement avec le message :
+```
+feat(data): digest YYYY-MM-DD
+```
+Le push vers `origin/main` reste manuel.
