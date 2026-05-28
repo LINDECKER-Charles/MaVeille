@@ -54,10 +54,14 @@ Chaque sujet déjà couvert dans les 30 derniers jours est exclu des rapports su
 2. Adapter le prompt de la tâche planifiée pour cibler les sources et le périmètre souhaités.
 3. Le prochain run produira automatiquement les fichiers du jour.
 
-## Versionnement
+## Visualisation
 
-Chaque digest matinal est commité localement avec le message :
+Une petite app SvelteKit (statique) lit ces fichiers et les rend dans une UI navigable :
+
+```bash
+cd web
+npm install
+npm run dev
 ```
-feat(data): digest YYYY-MM-DD
-```
-Le push vers `origin/main` reste manuel.
+
+Voir [`we
