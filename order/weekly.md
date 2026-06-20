@@ -75,15 +75,18 @@ highlights: 5
 ---
 ```
 
-## Commit & push automatiques
+## Commit local automatique (push manuel)
 
-Une fois le rapport hebdo généré, la routine **commit ET push automatiquement** :
+Une fois le rapport hebdo généré, la routine **commit en local** — **sans `git push`** (push manuel par Charles) :
 
 ```bash
+# Nettoyer un verrou git resté (le montage interdit parfois l'unlink -> on renomme)
+for L in .git/index.lock .git/HEAD.lock; do
+  [ -e "$L" ] && { rm -f "$L" 2>/dev/null || mv -f "$L" "$L.stale.$(date +%s)"; }
+done
 git add report/weekly/
-git commit -m "feat(data): weekly YYYY-Www"   # ex. weekly 2026-W25
-git push origin dev
+git commit -m "feat(data): weekly YYYY-Www"   # ex. weekly 2026-W25 — PAS de git push
 ```
 
-- **Branche : toujours `dev`** (comme la routine catégorie) → déploie test + prod via la CI. Le push **déclenche la CI/CD**.
-- En cas de conflit (`non-fast-forward`) : `git pull --rebase` puis re-push.
+- **Aucun `git push`.** Charles pousse à la main (`git push origin dev`), ce qui **déclenche la CI/CD** (déploie test + prod).
+- Si le commit échoue parce que le dépôt est verrouillé par un éditeur ouvert, le signaler sans rien forcer.

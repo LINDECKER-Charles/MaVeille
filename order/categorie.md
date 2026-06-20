@@ -126,17 +126,20 @@ sources_count: 3
 ```
 Exploité par l'app pour badges « HIGH IMPACT », filtres par tag, scoring de recherche. Absent ⇒ l'app dérive tout par heuristique (rétrocompatible).
 
-## Commit & push automatiques
+## Commit local automatique (push manuel)
 
-Une fois tous les fichiers du jour générés et la checklist (`DIGEST_FORMAT.md §7`) validée, la routine **commit ET push automatiquement** — aucune intervention manuelle :
+Une fois tous les fichiers du jour générés et la checklist (`DIGEST_FORMAT.md §7`) validée, la routine **commit en local** — **sans `git push`**. C'est Charles qui pousse à la main ensuite.
 
 ```bash
+# Nettoyer un verrou git resté (le montage interdit parfois l'unlink -> on renomme)
+for L in .git/index.lock .git/HEAD.lock; do
+  [ -e "$L" ] && { rm -f "$L" 2>/dev/null || mv -f "$L" "$L.stale.$(date +%s)"; }
+done
 git add report/categorie/
-git commit -m "feat(data): categorie YYYY-MM-DD"
-git push origin dev
+git commit -m "feat(data): categorie YYYY-MM-DD"   # PAS de git push
 ```
 
-- **Branche : toujours `dev`.** La pipeline `dev` build une fois puis déploie **test ET prod** (le seul gate avant prod est la CI : build + tests + e2e + lighthouse). Le push **déclenche la CI/CD**.
-- **Un seul commit** par run quotidien, toutes catégories confondues.
+- **Un seul commit** par run quotidien, toutes catégories confondues. **Aucun `git push`** (push manuel par Charles).
 - **Rien de neuf** (journée 100 % dédupliquée) → ne rien committer (pas de commit vide).
-- En cas de conflit au push (`non-fast-forward`), faire `git pull --rebase` puis re-push.
+- Si le commit échoue parce que le dépôt est verrouillé par un éditeur ouvert (`index` tenu par l'IDE), le signaler et ne rien forcer.
+- Le push manuel se fait sur `dev` (`git push origin dev`) et **déclenche la CI/CD** (build + tests + e2e + lighthouse → déploie test ET prod).
