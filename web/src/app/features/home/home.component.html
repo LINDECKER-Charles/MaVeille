@@ -1,60 +1,225 @@
-<section class="hero">
-  <h1>Digests quotidiens</h1>
-  <p class="hero-sub">Veille tech automatisée, générée chaque matin par Claude.</p>
+<header class="page-head">
+  <div class="head-text">
+    <p class="eyebrow">Briefing matinal</p>
+    <h1>{{ briefing?.title ?? 'Aujourd’hui' }}</h1>
+  </div>
+  @if (newCount() > 0) {
+    <button type="button" class="new-pill" (click)="scrollToNew()">
+      <span class="dot" aria-hidden="true"></span>
+      +{{ newCount() }} depuis ta dernière visite
+    </button>
+  }
+</header>
 
-  <dl class="kpis" aria-label="Statistiques globales">
-    <div>
-      <dt>Digests</dt>
-      <dd>{{ totals.digests }}</dd>
+@if (briefing; as b) {
+  <section class="briefing" aria-labelledby="briefing-title">
+    <div class="briefing-head">
+      <span id="briefing-title" class="briefing-label">
+        À retenir si tu n’as qu’une minute
+      </span>
+      <span class="briefing-chips">
+        @for (cat of b.categories; track cat) {
+          <span
+            class="cat-badge"
+            [style.--cat-accent]="store.accentFor(cat)"
+            [style.--cat-soft]="store.softFor(cat)"
+          >
+            <span class="mono" aria-hidden="true">{{ store.monogramFor(cat) }}</span>
+            {{ store.labelFor(cat) }}
+          </span>
+        }
+      </span>
     </div>
-    <div>
-      <dt>Sujets analysés</dt>
-      <dd>{{ totals.subjects }}</dd>
-    </div>
-    <div>
-      <dt>Sources citées</dt>
-      <dd>{{ totals.sources }}</dd>
-    </div>
-    @if (newCount() > 0) {
-      <div class="kpi-new">
-        <dt>Nouveau</dt>
-        <dd>+{{ newCount() }}</dd>
-      </div>
-    }
-  </dl>
-</section>
 
-<app-search-box (queryChange)="onQueryChange($event)" />
-
-@if (isSearching()) {
-  <ul id="results-list" class="results" aria-label="Résultats de recherche">
-    @if (hits().length === 0) {
-      <li class="empty">Aucun résultat. Essaie un autre mot-clé.</li>
-    } @else {
-      @for (h of hits(); track h.date + h.scope + h.type) {
-        <li>
-          <a class="result" [routerLink]="['/digest', h.date]">
-            <div class="result-head">
-              <span class="result-date">{{ h.date | frDate }}</span>
-              <span class="result-tags">
-                <span class="badge">{{ scopeLabel(h.scope) }}</span>
-                <span class="badge badge-soft">{{ typeLabel(h.type) }}</span>
-                @if (h.score > 1) {
-                  <span class="badge badge-soft">{{ h.score }} matchs</span>
-                }
-              </span>
-            </div>
-            <p class="result-snippet" [innerHTML]="safeSnippet(h.snippet)"></p>
-          </a>
+    <ul class="briefing-list">
+      @for (bl of b.bullets; track bl.category) {
+        <li [style.--cat-accent]="store.accentFor(bl.category)" [style.--cat-soft]="store.softFor(bl.category)">
+          <span class="bullet-mono" aria-hidden="true">{{ store.monogramFor(bl.category) }}</span>
+          <span class="bullet-text">
+            <strong>{{ bulletLead(bl.text) }}</strong>
+            @if (bulletRest(bl.text)) {
+              {{ ' ' + bulletRest(bl.text) }}
+            }
+          </span>
         </li>
       }
+    </ul>
+
+    <div class="briefing-foot">
+      <a class="cta" [routerLink]="['/digest', b.date]">Ouvrir le digest du jour →</a>
+      <span class="briefing-meta">
+        {{ b.totalSubjects }} sujets · {{ b.totalSources }} sources · lecture ~{{ b.readingMinutes }} min
+      </span>
+    </div>
+  </section>
+}
+
+<section class="kpis-row" aria-label="Indicateurs clés">
+  @for (k of kpis(); track k.label) {
+    <article class="kpi">
+      <div class="kpi-head">
+        <span class="kpi-label">{{ k.label }}</span>
+        @if (k.delta > 0) {
+          <span class="kpi-delta">+{{ k.delta }}</span>
+        }
+      </div>
+      <div class="kpi-body">
+        <span class="kpi-value">{{ k.value }}</span>
+        <app-sparkline [points]="k.spark" [color]="accentColor" />
+      </div>
+    </article>
+  }
+</section>
+
+<!-- Search -->
+<section class="search-block" aria-label="Recherche">
+  <app-search-box (queryChange)="onQueryChange($event)" />
+
+  <div class="filters" role="group" aria-label="Filtres de recherche">
+    <span class="filter-label">Catégorie</span>
+    @for (c of store.registry; track c.name) {
+      <button
+        type="button"
+        class="chip"
+        [class.active]="catFilter() === c.name"
+        [attr.aria-pressed]="catFilter() === c.name"
+        [style.--cat-accent]="store.accentFor(c.name)"
+        [style.--cat-soft]="store.softFor(c.name)"
+        (click)="toggleCat(c.name)"
+      >
+        <span class="mono" aria-hidden="true">{{ store.monogramFor(c.name) }}</span>
+        {{ c.label }}
+      </button>
     }
-  </ul>
-} @else if (digests.length === 0) {
+    <span class="filter-sep" aria-hidden="true"></span>
+    <span class="filter-label">Type</span>
+    <button
+      type="button"
+      class="chip chip-type"
+      [class.active]="typeFilter() === 'synthese'"
+      [attr.aria-pressed]="typeFilter() === 'synthese'"
+      (click)="toggleType('synthese')"
+    >
+      Synthèse
+    </button>
+    <button
+      type="button"
+      class="chip chip-type"
+      [class.active]="typeFilter() === 'detail'"
+      [attr.aria-pressed]="typeFilter() === 'detail'"
+      (click)="toggleType('detail')"
+    >
+      Détail
+    </button>
+  </div>
+
+  @if (isSearching()) {
+    @if (hits().length > 0) {
+      <p class="result-count" aria-live="polite">
+        {{ resultCount() }} résultat{{ resultCount() > 1 ? 's' : '' }}
+      </p>
+      <ul
+        id="results-list"
+        class="results"
+        aria-label="Résultats de recherche"
+        (keydown)="onResultsKeydown($event)"
+      >
+        @for (h of hits(); track h.date + h.scope + h.type; let i = $index) {
+          <li>
+            <a
+              #resultItem
+              class="result"
+              [class.active]="activeResult() === i"
+              [style.--cat-accent]="store.accentFor(h.scope)"
+              [routerLink]="['/digest', h.date]"
+            >
+              <div class="result-head">
+                <span
+                  class="cat-badge"
+                  [style.--cat-accent]="store.accentFor(h.scope)"
+                  [style.--cat-soft]="store.softFor(h.scope)"
+                >
+                  <span class="mono" aria-hidden="true">{{ store.monogramFor(h.scope) }}</span>
+                  {{ scopeLabel(h.scope) }}
+                </span>
+                <span class="type-badge">{{ typeLabel(h.type) }}</span>
+                <span class="result-date">{{ h.date | frDate: 'short' }}</span>
+              </div>
+              <p class="result-snippet" [innerHTML]="safeSnippet(h.snippet)"></p>
+            </a>
+          </li>
+        }
+      </ul>
+    } @else {
+      <div class="no-results" role="status" aria-live="polite">
+        <span class="empty-glyph" aria-hidden="true">∅</span>
+        <p class="no-results-msg">Aucun résultat</p>
+        <p class="no-results-hint">
+          @if (hasFilter()) {
+            Aucun sujet ne correspond avec ces filtres. Élargis ta recherche.
+          } @else {
+            Essaie un autre mot-clé ou retire des filtres.
+          }
+        </p>
+        <button type="button" class="reset-btn" (click)="resetFilters()">
+          Réinitialiser les filtres
+        </button>
+      </div>
+    }
+  } @else {
+    <!-- Discovery -->
+    <div class="discovery">
+      <div class="disco-group">
+        <span class="disco-label">Tags fréquents</span>
+        <div class="disco-tags">
+          @for (t of frequentTags(); track t.name) {
+            <button type="button" class="tag-btn" (click)="toggleCat(t.name)">
+              #{{ t.label }}
+            </button>
+          }
+        </div>
+      </div>
+
+      @if (recentSearches().length > 0) {
+        <div class="disco-group">
+          <span class="disco-label">Recherches récentes</span>
+          <div class="disco-tags">
+            @for (r of recentSearches(); track r) {
+              <button type="button" class="recent-btn" (click)="runRecent(r)">
+                <span aria-hidden="true">↻</span> {{ r }}
+              </button>
+            }
+          </div>
+        </div>
+      }
+
+      @if (briefing; as b) {
+        <a class="disco-cta" [routerLink]="['/digest', b.date]">
+          Aller au dernier digest — {{ b.title }} →
+        </a>
+      }
+    </div>
+  }
+</section>
+
+<!-- History feed -->
+<div class="history-sep">
+  <h2>Historique</h2>
+  <span class="rule" aria-hidden="true"></span>
+</div>
+<span id="feed-top" #feedTop tabindex="-1" aria-hidden="true"></span>
+
+@if (digests.length === 0) {
   <p class="empty">Aucun digest disponible pour le moment.</p>
 } @else {
-  <ul id="results-list" class="digests" aria-label="Liste des digests">
-    @for (d of digests; track d.date) {
+  <ul class="feed" aria-label="Liste des digests">
+    @for (d of digests; track d.date; let i = $index) {
+      @if (i === firstNewIndex() && newCount() > 0) {
+        <li class="group-label" aria-hidden="true">
+          <span class="dot"></span>
+          {{ newCount() }} nouveau{{ newCount() > 1 ? 'x' : '' }} depuis ta dernière visite
+        </li>
+      }
       <li>
         <app-digest-card [digest]="d" [isNew]="isNew(d.date)" />
       </li>

@@ -15,18 +15,19 @@ import type { RenderedDigest } from '../../data/types';
   imports: [RouterLink, FrDatePipe, DigestTabsComponent],
   template: `
     <nav class="breadcrumb" aria-label="Fil d'Ariane">
-      <a routerLink="/">← Tous les digests</a>
+      <a routerLink="/">&larr; Briefing</a>
     </nav>
 
     @if (digest(); as d) {
       <header class="day-head">
+        <p class="eyebrow">Digest du jour</p>
         <h1>{{ d.date | frDate }}</h1>
-        <p class="day-meta">Digest quotidien</p>
       </header>
 
       <app-digest-tabs [digest]="d" />
     } @else if (notFound()) {
       <header class="day-head">
+        <p class="eyebrow">Digest du jour</p>
         <h1>Digest introuvable</h1>
         <p class="day-meta">Aucun contenu pour cette date.</p>
       </header>
@@ -34,36 +35,56 @@ import type { RenderedDigest } from '../../data/types';
   `,
   styles: [
     `
+      :host {
+        display: block;
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 28px 24px 80px;
+      }
+      @media (max-width: 600px) {
+        :host { padding: 24px 16px 64px; }
+      }
       .breadcrumb {
-        margin-bottom: 1.5rem;
-        font-size: 0.9rem;
+        margin-bottom: 1.1rem;
+        font-size: 13px;
       }
       .breadcrumb a {
-        color: var(--text-dim);
+        color: var(--faint);
         border-bottom: none;
+        transition: color 0.15s ease;
       }
       .breadcrumb a:hover {
-        color: var(--accent);
+        color: var(--text);
       }
       .breadcrumb a:focus-visible {
-        outline: 2px solid var(--accent);
+        outline: 2px solid var(--brand);
         outline-offset: 2px;
-        border-radius: 2px;
+        border-radius: 3px;
       }
       .day-head {
-        margin-bottom: 2rem;
+        margin-bottom: 0.4rem;
+      }
+      .eyebrow {
+        margin: 0 0 0.35rem;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--faint);
       }
       .day-head h1 {
-        margin: 0 0 0.3rem;
-        font-size: 1.8rem;
+        margin: 0;
+        font-size: 26px;
+        font-weight: 800;
         letter-spacing: -0.02em;
-        line-height: 1.25;
+        line-height: 1.2;
+        text-transform: capitalize;
       }
       .day-meta {
-        margin: 0;
-        color: var(--text-dim);
+        margin: 0.4rem 0 0;
+        color: var(--faint);
         font-size: 0.9rem;
-        text-transform: capitalize;
       }
     `
   ]

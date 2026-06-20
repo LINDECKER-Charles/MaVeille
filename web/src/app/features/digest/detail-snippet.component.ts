@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input, model } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, model } from '@angular/core';
 import { MarkdownComponent } from '../../shared/markdown.component';
 import type { DetailSnippet } from '../../data/types';
 
@@ -11,55 +11,51 @@ import type { DetailSnippet } from '../../data/types';
     <details
       class="snippet"
       [class.is-open]="open()"
+      [style.--cat-accent]="accent()"
       [open]="open()"
       (toggle)="open.set($any($event.currentTarget).open)"
     >
       <summary class="snippet-head">
         <span class="snippet-index" aria-hidden="true">{{ snippet().index }}</span>
-        <span class="snippet-title-wrap">
-          <span class="snippet-title">{{ snippet().title }}</span>
+        <span class="snippet-main">
+          <span class="snippet-title-row">
+            <span class="snippet-title">{{ snippet().title }}</span>
+            @if (high()) {
+              <span class="badge-high">HIGH IMPACT</span>
+            }
+          </span>
+          <span class="snippet-meta">
+            @if (domain()) {
+              <span class="chip-source">
+                <span class="chip-dot" aria-hidden="true"></span>
+                {{ domain() }}
+              </span>
+            }
+            @if (snippet().date) {
+              <span class="meta-date">{{ snippet().date }}</span>
+            }
+            <span class="meta-rt">· {{ snippet().readingMinutes }} min de lecture</span>
+          </span>
           @if (snippet().preview && !open()) {
             <span class="snippet-preview">{{ snippet().preview }}</span>
           }
         </span>
-        <span class="snippet-chevron" aria-hidden="true">
-          <svg viewBox="0 0 16 16" width="14" height="14">
-            <path
-              d="M5 3l5 5-5 5"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.8"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
-        </span>
+        <span class="snippet-caret" aria-hidden="true">▾</span>
       </summary>
 
-      @if (snippet().source || snippet().date) {
-        <div class="snippet-meta">
-          @if (snippet().source) {
-            <span class="meta-chip meta-source">
-              <span class="meta-label">Source</span>
-              @if (snippet().sourceUrl) {
-                <a [href]="snippet().sourceUrl" target="_blank" rel="noopener noreferrer">{{
-                  snippet().source
-                }}</a>
-              } @else {
-                <span>{{ snippet().source }}</span>
-              }
-            </span>
-          }
-          @if (snippet().date) {
-            <span class="meta-chip meta-date">
-              <span class="meta-label">Date</span>
-              <span>{{ snippet().date }}</span>
-            </span>
-          }
-        </div>
-      }
-
-      <app-markdown class="snippet-body" [snippetBody]="true" [html]="snippet().bodyHtml" />
+      <div class="snippet-body-wrap">
+        <app-markdown class="snippet-body" [snippetBody]="true" [html]="snippet().bodyHtml" />
+        @if (snippet().sourceUrl) {
+          <a
+            class="source-link"
+            [href]="snippet().sourceUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Source : {{ domain() || snippet().source }} ↗
+          </a>
+        }
+      </div>
     </details>
   `,
   styleUrl: './detail-snippet.component.css'
@@ -67,4 +63,21 @@ import type { DetailSnippet } from '../../data/types';
 export class DetailSnippetComponent {
   readonly snippet = input.required<DetailSnippet>();
   readonly open = model<boolean>(false);
+  /** Whether the parent category is flagged high importance (badge). */
+  readonly high = input<boolean>(false);
+  /** Category accent (CSS color string from DigestStore.accentFor). */
+  readonly accent = input<string>('var(--brand)');
+
+  /** Hostname extracted from sourceUrl, falling back to a cleaned `source` string. */
+  readonly domain = computed<string>(() => {
+    const s = this.snippet();
+    const raw = s.sourceUrl ?? s.source;
+    if (!raw) return '';
+    try {
+      const url = new URL(raw.includes('://') ? raw : `https://${raw}`);
+      return url.hostname.replace(/^www\./, '');
+    } catch {
+      return raw.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
+    }
+  });
 }

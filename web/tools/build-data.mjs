@@ -245,14 +245,16 @@ async function splitDetailIntoSnippets(md) {
       .replace(/\n{3,}/g, '\n\n')
       .trimEnd();
 
+    const bodyHtml = await renderMarkdown(body);
     snippets.push({
       index: numMatch[1],
       title: numMatch[2].trim(),
       source: sourceMatch?.[1]?.trim(),
       sourceUrl: sourceMatch?.[2]?.trim(),
       date: dateMatch?.[1]?.trim(),
-      bodyHtml: await renderMarkdown(body),
-      preview: buildPreview(body)
+      bodyHtml,
+      preview: buildPreview(body),
+      readingMinutes: readingMinutes(stripHtml(bodyHtml), 2)
     });
   }
   return snippets;
@@ -277,6 +279,56 @@ function stripMd(md) {
 /** @param {string} raw @param {RegExp} re */
 function countMatches(raw, re) {
   return raw.match(re)?.length ?? 0;
+}
+
+// ---------------------------------------------------------------------------
+// Reading time + plaintext helpers (HTML -> word count, sentence extraction)
+// ---------------------------------------------------------------------------
+/** Strip HTML tags and decode the few entities our markdown pipeline emits. */
+/** @param {string} html */
+function stripHtml(html) {
+  return html
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/** @param {string} text */
+function wordCount(text) {
+  const t = text.trim();
+  return t ? t.split(/\s+/).length : 0;
+}
+
+/**
+ * Reading time in minutes from plain text, at ~200 wpm, with a floor.
+ * @param {string} text @param {number} floor
+ */
+function readingMinutes(text, floor) {
+  return Math.max(floor, Math.round(wordCount(text) / 200));
+}
+
+/**
+ * Extract the first usable sentence from stripped HTML, trimmed to ~maxLen
+ * characters with a clean break (sentence end, else last word boundary).
+ * @param {string} html @param {number} [maxLen]
+ */
+function firstSentence(html, maxLen = 220) {
+  const flat = stripHtml(html);
+  if (!flat) return '';
+  const end = flat.search(/[.!?](?:\s|$)/);
+  let sentence = end !== -1 ? flat.slice(0, end + 1) : flat;
+  if (sentence.length > maxLen) {
+    const cut = sentence.slice(0, maxLen);
+    const lastSpace = cut.lastIndexOf(' ');
+    sentence = (lastSpace > 0 ? cut.slice(0, lastSpace) : cut).trimEnd() + '…';
+  }
+  return sentence.trim();
 }
 
 // ---------------------------------------------------------------------------
@@ -406,9 +458,27 @@ function hslToHex(h, s, l) {
   return `#${f(0)}${f(8)}${f(4)}`;
 }
 
+/** URL/CSS-safe slug: lowercase, ASCII-folded, alphanumeric (e.g. CSharp -> csharp). */
+/** @param {string} name */
+function slugify(name) {
+  const ascii = name
+    .normalize('NFKD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '');
+  return ascii || 'cat';
+}
+
+/** Fallback monogram: 1–2 leading uppercase letters of the name. */
+/** @param {string} name */
+function defaultMonogram(name) {
+  const letters = name.replace(/[^a-zA-Z]/g, '');
+  return (letters.slice(0, letters.length >= 2 ? 2 : 1) || name.slice(0, 1)).toUpperCase();
+}
+
 /**
  * @param {Set<string>} discovered
- * @returns {Array<{ name: string, label: string, accent: string, icon?: string, description?: string, order: number }>}
+ * @returns {Array<{ name: string, label: string, slug: string, monogram: string, accent: string, icon?: string, description?: string, order: number }>}
  */
 function buildRegistry(discovered) {
   /** @type {Record<string, any>} */
@@ -432,6 +502,11 @@ function buildRegistry(discovered) {
     return {
       name,
       label: typeof c.label === 'string' ? c.label : name,
+      slug: typeof c.slug === 'string' && c.slug.trim() ? c.slug.trim() : slugify(name),
+      monogram:
+        typeof c.monogram === 'string' && c.monogram.trim()
+          ? c.monogram.trim()
+          : defaultMonogram(name),
       accent: typeof c.accent === 'string' ? c.accent : hashAccent(name),
       icon: typeof c.icon === 'string' ? c.icon : undefined,
       description: typeof c.description === 'string' ? c.description : undefined,
@@ -572,6 +647,100 @@ function strOf(v) {
 }
 
 // ---------------------------------------------------------------------------
+// Morning briefing (eager) — derived from the most recent digest
+// ---------------------------------------------------------------------------
+const FR_FULL_FMT = new Intl.DateTimeFormat('fr-FR', {
+  weekday: 'long',
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric'
+});
+
+/** Long French date, e.g. "vendredi 20 juin 2026" (mirrors date.util.formatDateFull). */
+/** @param {string} iso */
+function formatDateFull(iso) {
+  const [y, m, d] = iso.split('-').map(Number);
+  return FR_FULL_FMT.format(new Date(y, m - 1, d));
+}
+
+/**
+ * Build the eager briefing from the newest digest: one takeaway bullet per
+ * category that has a synthese, plus day-level totals and reading minutes.
+ * @param {ReturnType<typeof buildIndex>} index
+ * @param {ReturnType<typeof buildMeta>} meta
+ * @param {ReturnType<typeof buildRegistry>} registry
+ * @returns {Promise<import('../types').Briefing | null>}
+ */
+async function buildBriefing(index, meta, registry) {
+  // meta is sorted newest-first.
+  const latest = meta[0];
+  if (!latest) return null;
+  const rendered = await renderDigest(index, latest.date);
+  const regByName = new Map(registry.map((c) => [c.name, c]));
+
+  const bullets = [];
+  let readingTotal = 0;
+  for (const cat of rendered.categories) {
+    if (!cat.syntheseHtml) continue;
+    const text = firstSentence(cat.syntheseHtml);
+    if (!text) continue;
+    const reg = regByName.get(cat.category);
+    bullets.push({
+      category: cat.category,
+      slug: reg?.slug ?? slugify(cat.category),
+      label: reg?.label ?? cat.category,
+      text
+    });
+    readingTotal += cat.syntheseMinutes ?? 0;
+  }
+
+  return {
+    date: latest.date,
+    title: formatDateFull(latest.date),
+    categories: latest.categories,
+    totalSubjects: latest.totalSubjects,
+    totalSources: latest.totalSources,
+    readingMinutes: readingTotal,
+    bullets
+  };
+}
+
+/**
+ * Per-category subject distribution over each weekly's covered range.
+ * Mutates each weekly in place with a `distribution` array (omitted when the
+ * range is unknown or carries no subjects).
+ * @param {ReturnType<typeof buildMeta>} meta
+ * @param {ReturnType<typeof buildIndex>} index
+ * @param {ReturnType<typeof buildRegistry>} registry
+ * @param {Array<{ id: string, rangeStart?: string, rangeEnd?: string, distribution?: any }>} weeklies
+ */
+function attachWeeklyDistribution(meta, index, registry, weeklies) {
+  const regByName = new Map(registry.map((c) => [c.name, c]));
+  for (const w of weeklies) {
+    if (!w.rangeStart || !w.rangeEnd) continue;
+    /** @type {Map<string, number>} */
+    const counts = new Map();
+    for (const m of meta) {
+      if (m.date < w.rangeStart || m.date > w.rangeEnd) continue;
+      const day = index.bydate.get(m.date);
+      if (!day) continue;
+      for (const [cat, raw] of day.entries()) {
+        const { subjects } = buildEntryCounts(raw);
+        if (subjects > 0) counts.set(cat, (counts.get(cat) ?? 0) + subjects);
+      }
+    }
+    if (counts.size === 0) continue;
+    w.distribution = [...counts.entries()]
+      .map(([category, count]) => ({
+        category,
+        slug: regByName.get(category)?.slug ?? slugify(category),
+        count
+      }))
+      .sort((a, b) => (b.count !== a.count ? b.count - a.count : a.category.localeCompare(b.category)));
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Per-digest rendered payload
 // ---------------------------------------------------------------------------
 async function renderDigest(index, date) {
@@ -584,16 +753,36 @@ async function renderDigest(index, date) {
     let syntheseHtml;
     let detailHtml;
     let detailSnippets;
-    if (raw.synthese) syntheseHtml = await renderMarkdown(stripLeadingH1(raw.synthese.body).body);
+    let syntheseMinutes;
+    let detailMinutes;
+    if (raw.synthese) {
+      syntheseHtml = await renderMarkdown(stripLeadingH1(raw.synthese.body).body);
+      syntheseMinutes = readingMinutes(stripHtml(syntheseHtml), 1);
+    }
     if (raw.detail) {
       const { body } = stripLeadingH1(raw.detail.body);
       const snippets = await splitDetailIntoSnippets(body);
-      if (snippets.length > 0) detailSnippets = snippets;
-      else detailHtml = await renderMarkdown(body);
+      if (snippets.length > 0) {
+        detailSnippets = snippets;
+        const totalWords = snippets.reduce((n, s) => n + wordCount(stripHtml(s.bodyHtml)), 0);
+        detailMinutes = Math.max(2, Math.round(totalWords / 200));
+      } else {
+        detailHtml = await renderMarkdown(body);
+        detailMinutes = readingMinutes(stripHtml(detailHtml), 2);
+      }
     }
     const tags = arrTags(raw.detail) ?? arrTags(raw.synthese);
     const importance = strField(raw.detail, 'importance') ?? strField(raw.synthese, 'importance');
-    categories.push({ category, syntheseHtml, detailHtml, detailSnippets, tags, importance });
+    categories.push({
+      category,
+      syntheseHtml,
+      detailHtml,
+      detailSnippets,
+      tags,
+      importance,
+      syntheseMinutes,
+      detailMinutes
+    });
   }
 
   return { date, categories };
@@ -634,6 +823,8 @@ async function emit() {
   const stats = computeStats(index, meta);
   const registry = buildRegistry(index.categories);
   const weeklies = await buildWeeklies();
+  attachWeeklyDistribution(meta, index, registry, weeklies);
+  const briefing = await buildBriefing(index, meta, registry);
   const dates = meta.map((m) => m.date);
 
   rmSync(OUT_DIR, { recursive: true, force: true });
@@ -665,7 +856,13 @@ ${loaderEntries}
 
   // index.ts — eager, lightweight metadata + stats + registry + weeklies.
   const indexTs = `// AUTO-GENERATED by tools/build-data.mjs — do not edit.
-import type { DigestMeta, OverallStats, CategoryRegistryEntry, WeeklyReport } from '../types';
+import type {
+  DigestMeta,
+  OverallStats,
+  CategoryRegistryEntry,
+  WeeklyReport,
+  Briefing
+} from '../types';
 
 export const digests: DigestMeta[] = ${JSON.stringify(meta)};
 
@@ -674,6 +871,8 @@ export const stats: OverallStats = ${JSON.stringify(stats)};
 export const categoryRegistry: CategoryRegistryEntry[] = ${JSON.stringify(registry)};
 
 export const weeklies: WeeklyReport[] = ${JSON.stringify(weeklies)};
+
+export const briefing: Briefing | null = ${JSON.stringify(briefing)};
 
 export const totals = {
   digests: ${meta.length},
@@ -695,9 +894,15 @@ export {
   splitDetailIntoSnippets,
   stripLeadingH1,
   stripMd,
+  stripHtml,
   hashAccent,
+  slugify,
+  defaultMonogram,
+  readingMinutes,
+  firstSentence,
   extractWeekId,
   buildEntryCounts,
+  buildRegistry,
   renderMarkdown,
   disposeHighlighter
 };

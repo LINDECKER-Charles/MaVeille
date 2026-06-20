@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
+  PLATFORM_ID,
   computed,
   effect,
   inject,
@@ -9,10 +10,12 @@ import {
   signal,
   viewChildren
 } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { DigestStore } from '../../core/digest-store.service';
+import { PrefsService, type Depth } from '../../core/prefs.service';
 import { MarkdownComponent } from '../../shared/markdown.component';
 import { DetailSnippetComponent } from './detail-snippet.component';
-import type { RenderedCategory, RenderedDigest } from '../../data/types';
+import type { DetailSnippet, RenderedCategory, RenderedDigest } from '../../data/types';
 
 type Tab = string; // <category>
 
@@ -27,14 +30,22 @@ type Tab = string; // <category>
 export class DigestTabsComponent {
   readonly digest = input.required<RenderedDigest>();
   readonly store = inject(DigestStore);
+  readonly prefs = inject(PrefsService);
+
+  private readonly host = inject(ElementRef<HTMLElement>);
+  private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
   private readonly tabButtons = viewChildren<ElementRef<HTMLButtonElement>>('tabBtn');
 
   readonly tabList = computed<Tab[]>(() => this.digest().categories.map((c) => c.category));
 
   readonly activeTab = signal<Tab>('');
-  /** Per-tab synthèse/détail toggle state (true = détail). */
-  private readonly detailOpen = signal<Record<string, boolean>>({});
+
+  /** The currently selected category object. */
+  readonly activeCat = computed<RenderedCategory | undefined>(() =>
+    this.digest().categories.find((c) => c.category === this.activeTab())
+  );
+
   /** Per-tab per-snippet open state. */
   readonly snippetOpen = signal<Record<string, Record<string, boolean>>>({});
 
@@ -43,10 +54,23 @@ export class DigestTabsComponent {
     effect(() => {
       const d = this.digest();
       this.activeTab.set(d.categories[0]?.category ?? '');
-      this.detailOpen.set({});
       this.snippetOpen.set({});
     });
   }
+
+  // ---- depth (Profondeur) -------------------------------------------------
+
+  readonly depth = this.prefs.depth;
+
+  setDepth(d: Depth): void {
+    this.prefs.setDepth(d);
+  }
+
+  showDetail(): boolean {
+    return this.depth() === 'det';
+  }
+
+  // ---- category resolution ------------------------------------------------
 
   catFor(tab: Tab): RenderedCategory | undefined {
     return this.digest().categories.find((c) => c.category === tab);
@@ -56,20 +80,21 @@ export class DigestTabsComponent {
     return !!cat?.detailHtml || (cat?.detailSnippets?.length ?? 0) > 0;
   }
 
-  hasBoth(cat: RenderedCategory | undefined): boolean {
-    return !!cat?.syntheseHtml && this.hasDetail(cat);
+  /** Subjects of the active category (empty when the category falls back to raw HTML). */
+  activeSnippets(): DetailSnippet[] {
+    return this.activeCat()?.detailSnippets ?? [];
   }
 
-  showDetail(tab: Tab): boolean {
-    return this.detailOpen()[tab] ?? false;
-  }
-
-  setDetail(tab: Tab, value: boolean): void {
-    this.detailOpen.update((s) => ({ ...s, [tab]: value }));
+  isCatHigh(cat: RenderedCategory | undefined): boolean {
+    return cat?.importance === 'high';
   }
 
   tabLabel(tab: Tab): string {
     return this.store.labelFor(tab);
+  }
+
+  subjectCount(cat: RenderedCategory | undefined): number {
+    return cat?.detailSnippets?.length ?? 0;
   }
 
   tabId(tab: Tab): string {
@@ -78,6 +103,10 @@ export class DigestTabsComponent {
 
   panelId(tab: Tab): string {
     return `panel-${tab}`;
+  }
+
+  sectionId(index: string): string {
+    return `subj-${index}`;
   }
 
   selectTab(tab: Tab): void {
@@ -109,6 +138,8 @@ export class DigestTabsComponent {
     this.tabButtons()[next]?.nativeElement.focus();
   }
 
+  // ---- subject (snippet) open state ---------------------------------------
+
   isSnippetOpen(tab: Tab, index: string): boolean {
     return this.snippetOpen()[tab]?.[index] ?? false;
   }
@@ -123,5 +154,32 @@ export class DigestTabsComponent {
     const next: Record<string, boolean> = {};
     for (const s of snippets) next[s.index] = open;
     this.snippetOpen.update((m) => ({ ...m, [tab]: next }));
+  }
+
+  /** True when every subject of the active category is expanded. */
+  allOpen(): boolean {
+    const snippets = this.activeSnippets();
+    if (snippets.length === 0) return false;
+    const tab = this.activeTab();
+    return snippets.every((s) => this.isSnippetOpen(tab, s.index));
+  }
+
+  toggleAll(): void {
+    this.setAllSnippets(this.activeTab(), this.activeCat(), !this.allOpen());
+  }
+
+  // ---- TOC jump -----------------------------------------------------------
+
+  /** Expand the subject and smooth-scroll to it (offset compensated by scroll-margin). */
+  jumpTo(index: string): void {
+    this.setSnippetOpen(this.activeTab(), index, true);
+    if (!this.isBrowser) return;
+    // Defer so the <details> has opened before we scroll.
+    queueMicrotask(() => {
+      const el = (this.host.nativeElement as HTMLElement).querySelector<HTMLElement>(
+        `#${CSS.escape(this.sectionId(index))}`
+      );
+      el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
   }
 }

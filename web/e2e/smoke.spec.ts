@@ -9,7 +9,7 @@ for (const route of activeRoutes()) {
     const res = await page.goto(route.path);
     expect(res?.ok()).toBeTruthy();
     await expect(page.locator('main h1').first()).toBeVisible();
-    await expect(page.locator('header .brand-text')).toHaveText(/Veille/);
+    await expect(page.locator('header .wordmark')).toHaveText(/Veille/);
   });
 }
 
@@ -46,11 +46,14 @@ test('digest: IA detail renders a Mermaid SVG and a Shiki code block', async ({ 
   // to a specific panel by id so hidden duplicates never interfere.
   const panel = (cat: string) => page.locator(`#panel-${cat}`);
 
-  // IA: switch the tab + its detailed analysis view, open the first subject.
+  // Depth control is a single top-level radiogroup reflecting the active tab.
+  const setDetail = () => page.getByRole('radio', { name: 'Détail' }).click();
+
+  // IA: switch the tab + the detailed analysis view, open the first subject.
   await page.getByRole('tab', { name: 'IA' }).click();
   await expect(panel('IA')).toBeVisible();
-  await panel('IA').getByRole('radio', { name: 'Analyse détaillée' }).click();
-  await panel('IA').locator('.snippets .snippet summary').first().click();
+  await setDetail();
+  await panel('IA').locator('.subjects summary').first().click();
 
   // Mermaid renders client-side into an <svg> inside the marker element.
   await expect(panel('IA').locator('pre.mermaid svg').first()).toBeVisible({ timeout: 10000 });
@@ -58,7 +61,7 @@ test('digest: IA detail renders a Mermaid SVG and a Shiki code block', async ({ 
   // Tech: a Shiki-highlighted code block (the C# snippet, second subject).
   await page.getByRole('tab', { name: 'Tech' }).click();
   await expect(panel('Tech')).toBeVisible();
-  await panel('Tech').getByRole('radio', { name: 'Analyse détaillée' }).click();
-  await panel('Tech').locator('.snippets .snippet summary').nth(1).click();
+  await setDetail();
+  await panel('Tech').locator('.subjects summary').nth(1).click();
   await expect(panel('Tech').locator('pre.shiki').first()).toBeVisible({ timeout: 10000 });
 });

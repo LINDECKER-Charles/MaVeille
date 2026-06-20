@@ -1,83 +1,129 @@
+/* ============================================================================
+   Veille — Design system (refonte)
+   Tokens oklch (spec §1) + alias legacy pour migration progressive.
+   Theming via CSS custom properties sous :root[data-theme] + :root:not([data-theme]).
+   ========================================================================== */
+
 :root {
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, "JetBrains Mono", Consolas, "Liberation Mono", monospace;
+  /* --- Typo --- */
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Consolas, monospace;
 
-  --radius: 10px;
+  /* --- Rayons (spec §1.6) --- */
   --radius-sm: 6px;
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
-  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.25);
+  --radius: 10px;
+
+  /* --- Densité (comfort = défaut, spec §1.1) --- */
+  --card-pad: 18px;
+  --feed-gap: 13px;
+  --lh: 1.62;
 }
 
-:root[data-theme="dark"] {
-  --bg: #0b0d10;
-  --bg-elevated: #14181d;
-  --bg-soft: #1a1f26;
-  --border: #232a33;
-  --border-strong: #2f3742;
-  --text: #e6e9ef;
-  --text-muted: #98a2b3;
-  --text-dim: #667085;
-  --accent: #7aa2f7;
-  --accent-soft: rgba(122, 162, 247, 0.12);
-  --success: #9ece6a;
-  --warning: #e0af68;
-  --danger: #f7768e;
-  --code-bg: #0f1217;
-
-  --heatmap-0: #1a1f26;
-  --heatmap-1: #1e3a5f;
-  --heatmap-2: #2e5a8f;
-  --heatmap-3: #4d7fbf;
-  --heatmap-4: #7aa2f7;
-}
-
-:root[data-theme="light"] {
-  --bg: #fafafa;
-  --bg-elevated: #ffffff;
-  --bg-soft: #f3f4f6;
-  --border: #e5e7eb;
-  --border-strong: #d1d5db;
-  --text: #111827;
-  --text-muted: #4b5563;
-  --text-dim: #6b7280;
-  /* #1d4ed8 (blue-700) clears WCAG AA 4.5:1 on --accent-soft for the active nav link. */
-  --accent: #1d4ed8;
-  --accent-soft: rgba(29, 78, 216, 0.1);
-  --success: #16a34a;
-  --warning: #d97706;
-  --danger: #dc2626;
-  --code-bg: #f3f4f6;
-
-  --heatmap-0: #ebedf0;
-  --heatmap-1: #c5dbf8;
-  --heatmap-2: #7aa2f7;
-  --heatmap-3: #4575d4;
-  --heatmap-4: #1e40af;
-}
-
-/* Default to dark before the ThemeService hydrates the data-theme attribute. */
+/* ---------------------------------------------------------------------------
+   Thème DARK — appliqué à data-theme="dark" ET à :not([data-theme]) (anti-flash)
+   --------------------------------------------------------------------------- */
+:root[data-theme="dark"],
 :root:not([data-theme]) {
-  --bg: #0b0d10;
-  --bg-elevated: #14181d;
-  --bg-soft: #1a1f26;
-  --border: #232a33;
-  --border-strong: #2f3742;
-  --text: #e6e9ef;
-  --text-muted: #98a2b3;
-  --text-dim: #667085;
-  --accent: #7aa2f7;
-  --accent-soft: rgba(122, 162, 247, 0.12);
-  --success: #9ece6a;
-  --warning: #e0af68;
-  --danger: #f7768e;
-  --code-bg: #0f1217;
-  --heatmap-0: #1a1f26;
-  --heatmap-1: #1e3a5f;
-  --heatmap-2: #2e5a8f;
-  --heatmap-3: #4d7fbf;
-  --heatmap-4: #7aa2f7;
+  --bg:            oklch(0.165 0.012 256);
+  --surface:       oklch(0.205 0.013 256);
+  --surface-2:     oklch(0.245 0.014 256);
+  --border:        oklch(0.295 0.012 256);
+  --border-strong: oklch(0.36  0.013 256);
+  --text:          oklch(0.95 0.005 256);
+  --muted:         oklch(0.70 0.012 256);
+  --faint:         oklch(0.56 0.012 256);
+  --brand:         oklch(0.70 0.13 255);
+  --brand-soft:    oklch(0.32 0.07 255);
+  --on-brand:      oklch(0.16 0.01 256);
+
+  --cat-angular: oklch(0.74 0.15 28);   --cat-angular-soft: oklch(0.31 0.07 28);
+  --cat-csharp:  oklch(0.74 0.13 305);  --cat-csharp-soft:  oklch(0.31 0.07 305);
+  --cat-ia:      oklch(0.76 0.12 168);  --cat-ia-soft:      oklch(0.31 0.06 168);
+  --cat-tech:    oklch(0.80 0.11 78);   --cat-tech-soft:    oklch(0.33 0.06 78);
+
+  --high:   oklch(0.78 0.14 30);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 6px 20px -8px rgba(0, 0, 0, 0.5);
+
+  /* Rampe heatmap séquentielle mono-teinte dérivée de --brand (hue 255). */
+  --heatmap-0: var(--surface-2);
+  --heatmap-1: oklch(0.40 0.07 255);
+  --heatmap-2: oklch(0.52 0.10 255);
+  --heatmap-3: oklch(0.61 0.115 255);
+  --heatmap-4: oklch(0.70 0.13 255);
+
+  /* --- Alias legacy (composants existants : heatmap/markdown/kpis) --- */
+  --bg-elevated: var(--surface);
+  --bg-soft:     var(--surface-2);
+  --text-muted:  var(--muted);
+  --text-dim:    var(--faint);
+  --accent:      var(--brand);
+  --accent-soft: var(--brand-soft);
+  --success:     var(--cat-ia);
+  --warning:     var(--cat-tech);
+  --danger:      var(--cat-angular);
+  --code-bg:     var(--bg);
+  --shadow-sm:   var(--shadow);
+  --shadow-md:   var(--shadow);
 }
 
+/* ---------------------------------------------------------------------------
+   Thème LIGHT
+   --------------------------------------------------------------------------- */
+:root[data-theme="light"] {
+  --bg:            oklch(0.985 0.004 80);
+  --surface:       oklch(1 0 0);
+  --surface-2:     oklch(0.965 0.005 80);
+  --border:        oklch(0.915 0.006 80);
+  --border-strong: oklch(0.85  0.008 80);
+  --text:          oklch(0.26 0.012 256);
+  --muted:         oklch(0.46 0.012 256);
+  /* --faint assombri pour tenir l'AA 4.5:1 sur surface (#fff) et bg (crème). */
+  --faint:         oklch(0.50 0.013 256);
+  --brand:         oklch(0.52 0.18 255);
+  --brand-soft:    oklch(0.95 0.035 255);
+  --on-brand:      oklch(0.99 0 0);
+
+  /* Accents catégorie assombris (light) : texte accent sur fond -soft tient l'AA. */
+  --cat-angular: oklch(0.515 0.20 28);  --cat-angular-soft: oklch(0.95  0.04  28);
+  --cat-csharp:  oklch(0.50 0.19 305);  --cat-csharp-soft:  oklch(0.955 0.03  305);
+  --cat-ia:      oklch(0.47 0.12 168);  --cat-ia-soft:      oklch(0.95  0.045 168);
+  --cat-tech:    oklch(0.475 0.115 78); --cat-tech-soft:    oklch(0.95  0.05  78);
+
+  --high:   oklch(0.55 0.19 30);
+  --shadow: 0 1px 2px rgba(20, 20, 40, 0.05), 0 8px 24px -12px rgba(20, 20, 40, 0.12);
+
+  /* Rampe heatmap (light) : --heatmap-0 = surface-2, lightness décroissante. */
+  --heatmap-0: var(--surface-2);
+  --heatmap-1: oklch(0.86 0.06 255);
+  --heatmap-2: oklch(0.72 0.11 255);
+  --heatmap-3: oklch(0.62 0.16 255);
+  --heatmap-4: oklch(0.52 0.18 255);
+
+  /* --- Alias legacy --- */
+  --bg-elevated: var(--surface);
+  --bg-soft:     var(--surface-2);
+  --text-muted:  var(--muted);
+  --text-dim:    var(--faint);
+  --accent:      var(--brand);
+  --accent-soft: var(--brand-soft);
+  --success:     var(--cat-ia);
+  --warning:     var(--cat-tech);
+  --danger:      var(--cat-angular);
+  --code-bg:     var(--surface-2);
+  --shadow-sm:   var(--shadow);
+  --shadow-md:   var(--shadow);
+}
+
+/* Densité compact (spec §1.3) — neutre vis-à-vis du thème. */
+:root[data-density="compact"] {
+  --card-pad: 12px;
+  --feed-gap: 7px;
+  --lh: 1.5;
+}
+
+/* ---------------------------------------------------------------------------
+   Reset / base (spec §1.4)
+   --------------------------------------------------------------------------- */
 * {
   box-sizing: border-box;
 }
@@ -86,30 +132,39 @@ html,
 body {
   margin: 0;
   padding: 0;
+}
+
+html {
+  font-size: 15px;
+}
+
+body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-sans);
-  font-size: 15px;
-  line-height: 1.6;
+  line-height: var(--lh);
+  min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  transition: background 0.25s, color 0.25s;
 }
 
 a {
-  color: var(--accent);
+  color: var(--brand);
   text-decoration: none;
   border-bottom: 1px solid transparent;
   transition: border-color 0.15s ease;
 }
 a:hover {
-  border-bottom-color: var(--accent);
+  border-bottom-color: var(--brand);
 }
 
 code {
   font-family: var(--font-mono);
-  background: var(--code-bg);
+  background: var(--brand-soft);
+  color: var(--brand);
   padding: 0.1em 0.4em;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   font-size: 0.9em;
 }
 
@@ -122,6 +177,7 @@ pre {
 }
 pre code {
   background: transparent;
+  color: inherit;
   padding: 0;
 }
 
@@ -131,7 +187,38 @@ hr {
   margin: 2rem 0;
 }
 
-/* ---- Shared utilities (were duplicated across page components) ---- */
+/* ---------------------------------------------------------------------------
+   Accessibilité / motion (spec §1.7)
+   --------------------------------------------------------------------------- */
+*:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+::selection {
+  background: var(--brand-soft);
+}
+
+@keyframes vSlideIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes vExpand {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Utilitaires partagés
+   --------------------------------------------------------------------------- */
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -147,18 +234,19 @@ hr {
 .kpis {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 0.75rem;
+  gap: var(--feed-gap);
   margin: 0;
   padding: 0;
 }
 .kpis > div {
-  background: var(--bg-elevated);
+  background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 0.85rem 1rem;
+  border-radius: 13px;
+  padding: 16px 18px;
 }
 .kpis dt {
-  color: var(--text-dim);
+  color: var(--muted);
+  font-family: var(--font-mono);
   font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -166,13 +254,17 @@ hr {
 }
 .kpis dd {
   margin: 0;
-  font-size: 1.5rem;
-  font-weight: 600;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
   color: var(--text);
 }
 
-/* ---- Markdown rendering (ported verbatim from the SvelteKit app.css) ---- */
+/* ---------------------------------------------------------------------------
+   Markdown — typographie du contenu sanitisé (rendu via bypassSecurityTrustHtml)
+   --------------------------------------------------------------------------- */
 .markdown {
   color: var(--text);
 }
@@ -182,7 +274,7 @@ hr {
 .markdown h3,
 .markdown h4 {
   line-height: 1.25;
-  font-feature-settings: "ss01", "cv01";
+  font-feature-settings: 'ss01', 'cv01';
 }
 .markdown h1:first-child,
 .markdown h2:first-child,
@@ -193,37 +285,39 @@ hr {
 
 .markdown h1 {
   font-size: 2.15rem;
-  font-weight: 700;
-  letter-spacing: -0.025em;
+  font-weight: 800;
+  letter-spacing: -0.03em;
   color: var(--text);
-  margin: 2em 0 0.55em;
+  margin: 1.8em 0 0.5em;
 }
 .markdown h2 {
-  font-size: 1.55rem;
-  font-weight: 650;
-  letter-spacing: -0.015em;
-  color: var(--accent);
-  margin: 2.4em 0 0.75em;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  margin: 2.2em 0 0.7em;
 }
 .markdown h3 {
   font-size: 1.18rem;
   font-weight: 600;
-  letter-spacing: -0.005em;
-  color: var(--text);
+  letter-spacing: -0.01em;
+  color: var(--brand);
   margin: 1.9em 0 0.5em;
 }
 .markdown h4 {
   font-size: 0.78rem;
   font-weight: 700;
-  color: var(--text-muted);
+  color: var(--muted);
   margin: 1.6em 0 0.45em;
   text-transform: uppercase;
-  letter-spacing: 0.09em;
+  letter-spacing: 0.08em;
+  font-family: var(--font-mono);
 }
 
 .markdown p {
   margin: 0.95em 0;
   color: var(--text);
+  line-height: 1.68;
 }
 
 .markdown ul,
@@ -236,41 +330,38 @@ hr {
   margin: 0.4em 0;
 }
 .markdown li::marker {
-  color: var(--accent);
+  color: var(--brand);
 }
 .markdown ol li::marker {
-  color: var(--text-muted);
+  color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
 
 .markdown blockquote {
-  border-left: 3px solid var(--accent);
+  border-left: 3px solid var(--brand);
   padding: 0.2em 0 0.2em 1rem;
   margin: 1.3em 0;
-  color: var(--text-muted);
+  color: var(--muted);
   font-style: italic;
 }
 
 .markdown strong {
   color: var(--text);
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .markdown em {
-  color: var(--text-muted);
+  color: var(--muted);
   font-style: italic;
 }
 
 .markdown code {
-  color: var(--accent);
-  background: var(--accent-soft);
+  color: var(--brand);
+  background: var(--brand-soft);
   border: 1px solid transparent;
 }
 
-/* ---- Shiki (build-time syntax highlighting, dual light/dark theme) ---- */
-/* Shiki emits its own <pre class="shiki"> with CSS-variable colors per token.
-   Switch the active variable set on the app's data-theme; default (no attr)
-   and "dark" use the dark palette, "light" uses the light palette. */
+/* ---- Shiki (build-time, dual light/dark). Sélecteurs INTACTS. ---- */
 .markdown pre.shiki {
   background: var(--shiki-dark-bg, var(--code-bg));
 }
@@ -285,7 +376,6 @@ hr {
 :root[data-theme='light'] .markdown pre.shiki span {
   color: var(--shiki-light);
 }
-/* Shiki code is already styled by token spans; neutralize the inline-code look. */
 .markdown pre.shiki code {
   color: inherit;
   background: transparent;
@@ -293,17 +383,14 @@ hr {
   padding: 0;
 }
 
-/* ---- Mermaid diagrams (rendered lazily client-side) ---- */
-/* Pre-render keeps the raw source inside <pre class="mermaid">; once Mermaid
-   runs it replaces the contents with an <svg>. Center and frame the result. */
+/* ---- Mermaid (rendu client-side). Sélecteurs INTACTS. ---- */
 .markdown pre.mermaid {
   background: transparent;
   border: 0;
   padding: 0.5rem 0;
   text-align: center;
-  /* Hide the raw source flash before Mermaid renders (browser only). */
   white-space: pre-wrap;
-  color: var(--text-muted);
+  color: var(--muted);
 }
 .markdown pre.mermaid[data-processed='true'] {
   color: inherit;
@@ -314,12 +401,12 @@ hr {
 }
 
 .markdown a {
-  color: var(--accent);
-  border-bottom: 1px dashed color-mix(in srgb, var(--accent) 50%, transparent);
+  color: var(--brand);
+  border-bottom: 1px dashed color-mix(in srgb, var(--brand) 50%, transparent);
 }
 .markdown a:hover {
   border-bottom-style: solid;
-  border-bottom-color: var(--accent);
+  border-bottom-color: var(--brand);
 }
 
 .markdown table {
@@ -336,13 +423,13 @@ hr {
   vertical-align: top;
 }
 .markdown th {
-  color: var(--text-muted);
+  color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   font-size: 0.75rem;
   font-weight: 600;
   border-bottom: 1px solid var(--border-strong);
-  background: var(--bg-soft);
+  background: var(--surface-2);
 }
 .markdown td {
   color: var(--text);
