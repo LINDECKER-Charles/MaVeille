@@ -58,10 +58,12 @@ test('digest: IA detail renders a Mermaid SVG and a Shiki code block', async ({ 
   // Mermaid renders client-side into an <svg> inside the marker element.
   await expect(panel('IA').locator('pre.mermaid svg').first()).toBeVisible({ timeout: 10000 });
 
-  // Tech: a Shiki-highlighted code block (the C# snippet, second subject).
+  // Tech: a Shiki-highlighted code block. Scope to the opened subject — sibling
+  // subjects also contain `pre.shiki` but stay collapsed (hidden) in their <details>.
   await page.getByRole('tab', { name: 'Tech' }).click();
   await expect(panel('Tech')).toBeVisible();
   await setDetail();
-  await panel('Tech').locator('.subjects summary').nth(1).click();
-  await expect(panel('Tech').locator('pre.shiki').first()).toBeVisible({ timeout: 10000 });
+  const techSubject = panel('Tech').locator('.subjects .subject').nth(1);
+  await techSubject.locator('summary').click();
+  await expect(techSubject.locator('pre.shiki').first()).toBeVisible({ timeout: 10000 });
 });
