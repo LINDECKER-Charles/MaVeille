@@ -4,9 +4,8 @@
   <header>
     <div class="header-inner">
       <a routerLink="/" class="brand" aria-label="Veille — accueil">
-        <span class="dot" aria-hidden="true"></span>
-        <span class="brand-text">Veille</span>
-        <span class="brand-sub">tech digests</span>
+        <span class="logo" aria-hidden="true">V</span>
+        <span class="wordmark">Veille</span>
       </a>
 
       <nav class="primary-nav" aria-label="Navigation principale">
@@ -24,6 +23,35 @@
         }
       </nav>
 
+      <span class="spacer"></span>
+
+      <button class="search-btn" type="button" (click)="goSearch()" aria-label="Rechercher">
+        <span class="search-icon" aria-hidden="true">⌕</span>
+        <span class="search-label">Rechercher</span>
+        <kbd aria-hidden="true">/</kbd>
+      </button>
+
+      <div class="segmented" role="radiogroup" aria-label="Densité d'affichage">
+        <button
+          type="button"
+          role="radio"
+          [attr.aria-checked]="prefs.density() === 'comfort'"
+          [class.active]="prefs.density() === 'comfort'"
+          (click)="setDensity('comfort')"
+        >
+          Confort
+        </button>
+        <button
+          type="button"
+          role="radio"
+          [attr.aria-checked]="prefs.density() === 'compact'"
+          [class.active]="prefs.density() === 'compact'"
+          (click)="setDensity('compact')"
+        >
+          Compact
+        </button>
+      </div>
+
       <button
         class="theme-toggle"
         type="button"
@@ -31,7 +59,7 @@
         [attr.aria-label]="'Passer en mode ' + (theme() === 'dark' ? 'clair' : 'sombre')"
         title="Thème"
       >
-        <span aria-hidden="true">{{ theme() === 'dark' ? '☾' : '☀' }}</span>
+        <span aria-hidden="true">{{ theme() === 'dark' ? '☀' : '☾' }}</span>
       </button>
     </div>
   </header>

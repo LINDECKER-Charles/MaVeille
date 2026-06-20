@@ -37,7 +37,6 @@ import {
           [value]="value()"
           (input)="onInput($event)"
           aria-describedby="search-help"
-          aria-controls="results-list"
           autocomplete="off"
           spellcheck="false"
         />
@@ -62,7 +61,7 @@ import {
   styles: [
     `
       .search {
-        margin: 2rem 0 1rem;
+        margin: 0;
       }
       .search-field {
         position: relative;
@@ -71,20 +70,21 @@ import {
       }
       .search-icon {
         position: absolute;
-        left: 14px;
+        left: 16px;
         width: 18px;
         height: 18px;
-        color: var(--text-dim);
+        color: var(--faint);
         pointer-events: none;
       }
       .search input {
         flex: 1;
-        background: var(--bg-elevated);
-        border: 1px solid var(--border);
+        background: var(--surface);
+        border: 1px solid var(--border-strong);
         color: var(--text);
         font: inherit;
-        padding: 0.7rem 2.4rem;
-        border-radius: var(--radius);
+        font-size: 16px;
+        padding: 15px 46px 15px 46px;
+        border-radius: 13px;
         width: 100%;
         transition: border-color 0.15s ease, box-shadow 0.15s ease;
       }
@@ -93,18 +93,18 @@ import {
       }
       .search input:focus {
         outline: none;
-        border-color: var(--accent);
-        box-shadow: 0 0 0 3px var(--accent-soft);
+        border-color: var(--brand);
+        box-shadow: 0 0 0 3px var(--brand-soft);
       }
       .search input::placeholder {
-        color: var(--text-dim);
+        color: var(--faint);
       }
       .search-clear {
         position: absolute;
-        right: 8px;
+        right: 10px;
         background: transparent;
         border: none;
-        color: var(--text-dim);
+        color: var(--faint);
         cursor: pointer;
         font-size: 1.4rem;
         width: 28px;
@@ -118,12 +118,12 @@ import {
       .search-clear:hover,
       .search-clear:focus-visible {
         color: var(--text);
-        background: var(--bg-soft);
+        background: var(--surface-2);
       }
       .search-help {
         margin: 0.5rem 2px 0;
-        font-size: 0.8rem;
-        color: var(--text-dim);
+        font-size: 12.5px;
+        color: var(--faint);
       }
     `
   ]

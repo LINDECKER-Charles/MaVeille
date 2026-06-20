@@ -19,7 +19,7 @@ describe('App', () => {
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelector('.brand-text')?.textContent).toContain('Veille');
+    expect(el.querySelector('.wordmark')?.textContent).toContain('Veille');
     expect(el.querySelector('.theme-toggle')).toBeTruthy();
   });
 });

@@ -42,6 +42,8 @@ export interface DetailSnippet {
   date?: string;
   bodyHtml: string;
   preview?: string;
+  /** Estimated reading time in minutes (words of stripped bodyHtml / 200, floor 2). */
+  readingMinutes: number;
 }
 
 export interface RenderedCategory {
@@ -51,6 +53,10 @@ export interface RenderedCategory {
   detailSnippets?: DetailSnippet[];
   tags?: string[];
   importance?: string;
+  /** Estimated reading time of the synthese (words / 200, floor 1). */
+  syntheseMinutes?: number;
+  /** Estimated reading time of the full detail (words / 200, floor 2). */
+  detailMinutes?: number;
 }
 
 export interface RenderedDigest {
@@ -61,6 +67,10 @@ export interface RenderedDigest {
 export interface CategoryRegistryEntry {
   name: string;
   label: string;
+  /** URL/CSS-safe identifier (config, or slugify(name)). Drives --cat-<slug> tokens. */
+  slug: string;
+  /** Short visual badge (config, or 1–2 leading uppercase letters of name). */
+  monogram: string;
   accent: string;
   icon?: string;
   description?: string;
@@ -78,6 +88,25 @@ export interface WeeklyReport {
   rangeEnd?: string;
   /** Sanitized HTML rendered from the markdown body (H1 stripped). */
   html: string;
+  /** Optional per-category subject distribution over the covered range. */
+  distribution?: { category: Category; slug: string; count: number }[];
+}
+
+/**
+ * Eager morning briefing derived from the most recent digest. Surfaces a one-line
+ * takeaway per category alongside day-level totals and synthese reading time.
+ */
+export interface Briefing {
+  /** ISO date (YYYY-MM-DD) of the source digest. */
+  date: string;
+  /** Long French date, e.g. "vendredi 20 juin 2026". */
+  title: string;
+  categories: Category[];
+  totalSubjects: number;
+  totalSources: number;
+  /** Sum of per-category synthese reading minutes. */
+  readingMinutes: number;
+  bullets: { category: Category; slug: string; label: string; text: string }[];
 }
 
 /** Search index entry shape (search-index.json). */
