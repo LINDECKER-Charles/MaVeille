@@ -1,0 +1,179 @@
+:host {
+  display: block;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 32px 24px 80px;
+}
+@media (max-width: 600px) {
+  :host { padding: 24px 16px 64px; }
+}
+
+.page-head {
+  margin-bottom: 28px;
+}
+.page-head h1 {
+  margin: 0 0 6px;
+  font-size: 27px;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}
+.sub {
+  margin: 0;
+  color: var(--faint, var(--text-dim));
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+}
+
+/* --- KPI row ------------------------------------------------------------- */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--feed-gap);
+  margin-bottom: 28px;
+}
+.kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--surface, var(--bg-elevated));
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  padding: 17px 18px;
+}
+.kpi-num {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.kpi-label {
+  font-size: 12.5px;
+  color: var(--muted, var(--text-muted));
+}
+.kpi-ctx {
+  font-size: 11.5px;
+  color: var(--faint, var(--text-dim));
+}
+
+/* --- Section cards ------------------------------------------------------- */
+.block {
+  background: var(--surface, var(--bg-elevated));
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px 24px;
+  margin-bottom: var(--feed-gap);
+}
+.block-head {
+  margin-bottom: 18px;
+}
+.block-head.row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.block-head h2 {
+  margin: 0 0 4px;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.block-head p {
+  margin: 0;
+  color: var(--faint, var(--text-dim));
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+/* --- Window selector ----------------------------------------------------- */
+.seg {
+  display: inline-flex;
+  gap: 2px;
+  flex: none;
+  background: var(--surface, var(--bg-elevated));
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 3px;
+}
+.seg button {
+  border: 0;
+  background: transparent;
+  color: var(--faint, var(--text-dim));
+  font: 500 12px var(--font-sans, inherit);
+  font-variant-numeric: tabular-nums;
+  padding: 4px 10px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.seg button:hover {
+  color: var(--text);
+}
+.seg button.active {
+  background: var(--surface-2, var(--bg-soft));
+  color: var(--text);
+}
+
+/* --- Effort (donut + bars) ---------------------------------------------- */
+.effort {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 32px;
+}
+.effort-donut {
+  flex: none;
+}
+.effort-bars {
+  min-width: 0;
+}
+.legend {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+.legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted, var(--text-muted));
+}
+.legend-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 4px;
+  flex: none;
+}
+
+.empty {
+  color: var(--faint, var(--text-dim));
+  text-align: center;
+  padding: 32px 0;
+}
+
+/* --- Responsive ---------------------------------------------------------- */
+@media (max-width: 900px) {
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .effort {
+    grid-template-columns: 1fr;
+    gap: 24px;
+    justify-items: center;
+  }
+  .effort-bars {
+    width: 100%;
+  }
+}
+@media (max-width: 540px) {
+  .kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}

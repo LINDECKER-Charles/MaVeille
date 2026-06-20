@@ -2,7 +2,7 @@
 
 > Ce document est le contrat formel à respecter par le workflow `veille-tech-quotidienne` (Claude Cowork) pour que les digests soient correctement indexés et rendus par l'app `web/`.
 
-Tout changement de structure doit être répercuté ici **et** dans `web/src/lib/digests.ts`.
+Tout changement de structure doit être répercuté ici **et** dans le générateur de données `web/tools/build-data.mjs`. Les prompts des routines qui produisent ces fichiers vivent dans [`order/`](order/).
 
 ---
 
@@ -10,12 +10,15 @@ Tout changement de structure doit être répercuté ici **et** dans `web/src/lib
 
 ```
 Veille/
-├── Recap/
-│   └── YYYY-MM-DD_recap.md           ← un fichier par jour
-└── Categorie/
-    └── <Categorie>/                   ← un dossier par thématique
-        ├── YYYY-MM-DD_synthese.md
-        └── YYYY-MM-DD_detail.md
+├── report/
+│   ├── weekly/
+│   │   └── YYYY-Www_weekly.md         ← un rapport par semaine ISO (ex. 2026-W25)
+│   └── categorie/
+│       └── <Categorie>/               ← un dossier par thématique
+│           ├── YYYY-MM-DD_synthese.md
+│           └── YYYY-MM-DD_detail.md
+├── order/                             ← prompts des routines (source de vérité)
+└── archive/                           ← anciens rapports gelés (dont recaps quotidiens)
 ```
 
 **Règles dures :**
@@ -23,8 +26,9 @@ Veille/
 | Élément | Règle | Pourquoi |
 |---|---|---|
 | Date dans le nom | `YYYY-MM-DD` (ISO 8601, avec tirets) | Extraite par regex `/(\d{4}-\d{2}-\d{2})/` |
-| Séparateur date↔suffixe | underscore `_` | Ex : `2026-05-27_recap.md`, **pas** `2026-05-27-recap.md` |
-| Suffixes | `_recap.md`, `_synthese.md`, `_detail.md` | Match exact, en minuscules |
+| Séparateur date↔suffixe | underscore `_` | Ex : `2026-05-27_synthese.md`, **pas** `2026-05-27-synthese.md` |
+| Suffixes | `_synthese.md`, `_detail.md` (catégorie) · `_weekly.md` (hebdo) | Match exact, en minuscules |
+| Semaine (hebdo) | `YYYY-Www` ISO 8601 | Ex : `2026-W25_weekly.md` (extrait par regex `/(\d{4})-W(\d{2})/`) |
 | Nom de catégorie | Dossier en CamelCase ASCII (ex : `Angular`, `CSharp`, `IA`, `Tech`) | Affiché tel quel dans l'onglet |
 | Encodage | UTF-8 sans BOM | Évite les artefacts de rendu |
 
@@ -34,44 +38,19 @@ Veille/
 
 ## 2. Contenu attendu par type de fichier
 
-### 2.1 `Recap/YYYY-MM-DD_recap.md` — vue d'ensemble du jour
+### 2.1 `report/weekly/YYYY-Www_weekly.md` — rapport hebdomadaire
 
-**Rôle dans l'UI** : page d'accueil du digest, onglet « Recap global » par défaut.
+**Rôle dans l'UI** : pièce éditoriale transversale, listée sur `/rapports` et rendue sur `/rapports/:week`. Remplace l'ancien recap quotidien (passé en cadence hebdomadaire).
 
-```markdown
-# Digest Tech — Recap global du <jour de la semaine> <date en lettres>
-
-<Paragraphe d'intro : nb sujets retenus, nb thématiques, 2-3 mouvements de fond
-qui traversent la journée. 3-4 phrases max.>
-
-## <Section thématique 1>
-
-<2-4 phrases denses qui synthétisent les sujets de cette catégorie, en croisant
-les enjeux. Citer les chiffres clés (versions, %, dates), les actions concrètes.>
-
-## <Section thématique 2>
-…
-
-## À retenir si tu n'as qu'une minute
-
-<Bullet list courte (2-4 items) d'actions concrètes ou de chiffres à garder.>
-
-## Index des analyses détaillées
-
-- **<Categorie>** : <résumé une ligne> → `Categorie/<Cat>/YYYY-MM-DD_detail.md`
-- …
-
----
-*Généré le <date> par la tâche planifiée `veille-tech-quotidienne` (Claude Cowork).*
-```
+> Le template complet et les règles de rédaction sont dans [`order/weekly.md`](order/weekly.md). Structure : un `# H1` (titre extrait), des `## H2` par fil rouge/catégorie, un bloc « À retenir si tu n'as qu'une minute », un « Index de la semaine ».
 
 **Contraintes UI :**
 
-- **Le H1 est extrait** et utilisé comme titre de la page → garder une seule H1, en première ligne.
-- Les H2 deviennent des ancres internes naturelles → titres concis (< 60 caractères).
-- L'« Index des analyses détaillées » est conservé tel quel mais les **liens relatifs ne sont pas suivis** (l'app gère sa propre navigation via les onglets).
+- **Le H1 est extrait** et utilisé comme titre → une seule H1, en première ligne.
+- Les H2 deviennent des sections → titres concis (< 60 caractères).
+- Nom de fichier matchant `/(\d{4})-W(\d{2})_weekly\.md/`. Les liens relatifs vers d'autres `.md` ne sont pas suivis (l'app gère sa navigation).
 
-### 2.2 `Categorie/<Cat>/YYYY-MM-DD_synthese.md` — vue condensée par thématique
+### 2.2 `report/categorie/<Cat>/YYYY-MM-DD_synthese.md` — vue condensée par thématique
 
 **Rôle dans l'UI** : onglet « Synthèse » de la catégorie. C'est la vue par défaut quand on ouvre une catégorie.
 
@@ -99,7 +78,7 @@ les enjeux. Citer les chiffres clés (versions, %, dates), les actions concrète
 - Le H1 est extrait et masqué du contenu rendu (la date est déjà dans l'en-tête de page).
 - Si plusieurs sujets, utiliser une H2 par sujet (`## Top 1 — …`, `## Top 2 — …`).
 
-### 2.3 `Categorie/<Cat>/YYYY-MM-DD_detail.md` — analyses approfondies
+### 2.3 `report/categorie/<Cat>/YYYY-MM-DD_detail.md` — analyses approfondies
 
 **Rôle dans l'UI** : onglet « Analyse détaillée », accessible via le switch Synthèse / Détail.
 
@@ -115,16 +94,23 @@ les enjeux. Citer les chiffres clés (versions, %, dates), les actions concrète
 
 <Pourquoi ce sujet existe, ce qui l'a amené, le background nécessaire. 1-2 paragraphes.>
 
-### Ce qui change concrètement
+### Comment ça marche
 
-<Détails techniques précis. Bullets bienvenus.>
+<Le cœur pédagogique : explique le mécanisme / concept PAS À PAS, comme un mini-cours.
+Ajoute un diagramme Mermaid (bloc `mermaid`) dès que le sujet touche une archi, un flux,
+une séquence ou un modèle de données.>
+
+### En pratique — exemple de code
+
+<Au moins un bloc de code commenté (`lang` explicite, ≤ 30 lignes) montrant l'usage réel.
+AVANT / APRÈS si c'est une évolution de code.>
 
 ### Pourquoi ça compte pour toi
 
 <Implications pour un dev senior backend (Angular, .NET, Symfony, PostgreSQL).
 Toujours formuler en « tu », jamais en « nous ».>
 
-### Détails techniques | Points de vigilance | Limites
+### Pour aller plus loin | Points de vigilance | Limites
 
 <Sections optionnelles selon le sujet.>
 
@@ -151,13 +137,34 @@ Toujours formuler en « tu », jamais en « nous ».>
 | **Gras** / *italique* | ✓ | Gras = nom propre / chiffre clé ; italique = nuance |
 | Bullets `-` et numérotés `1.` | ✓ | Indentation max 2 niveaux pour rester lisible |
 | `Code inline` | ✓ | Pour noms de fichiers, commandes, identifiants |
-| Blocs de code ``` ``` | ✓ | Pas de syntax highlighting (à dessein — moins de poids) |
+| Blocs de code ` ```lang ` | ✓ | **Coloration syntaxique au build** (Shiki). **Toujours préciser le langage** (` ```ts `, ` ```csharp `, ` ```bash `, ` ```json `…). |
+| Diagrammes ` ```mermaid ` | ✓ | Rendu en diagramme dans l'app. `flowchart`, `sequenceDiagram`, `classDiagram`, `erDiagram`, `gantt`… **1 par sujet max.** |
 | Tableaux GFM | ✓ | Préférer aux listes pour comparaisons à colonnes |
 | Liens `[texte](url)` | ✓ | Toujours absolus |
 | `> blockquote` | ✓ | Pour citations directes uniquement |
 | HR `---` | ✓ | Séparateur entre sujets |
 | Images | ⚠ | Ne pas inclure — pas d'asset pipeline configuré |
 | HTML brut | ✗ | Sanitisé par DOMPurify, comportement non garanti |
+
+---
+
+### 3.1 Approche pédagogique — code & diagrammes (mini-cours par sujet)
+
+Une news ne vaut que si on la **comprend**. Côté production, les routines ([`order/`](order/)) traitent **chaque sujet en mini-cours** : une explication « comment ça marche » pas à pas, **plus** au moins un artefact concret. Vise le combo **code + diagramme + explication** ; le plancher absolu est **un** artefact, jamais zéro.
+
+- **Code** : extrait minimal et parlant (` ```ts `, ` ```csharp `, ` ```bash `, ` ```json `…), **≤ 30 lignes**, qui illustre l'usage réel (appel d'API, config, migration EF Core, commande CLI). Toujours préciser le langage → coloration au build. **AVANT / APRÈS** pour une évolution de code. Plusieurs blocs autorisés si ça sert la compréhension.
+- **Diagramme Mermaid** (` ```mermaid `) : pour visualiser une **architecture**, un **flux**, une **séquence** ou un **modèle de données**. **Obligatoire dès que le sujet est de cette nature** ; particulièrement pertinent pour l'**IA** (pipeline RAG, orchestration d'agents, flux d'inférence) et la **Tech/archi** (déploiement, réseau, schéma BDD). **1 diagramme par sujet max**, lisible (≤ ~12 nœuds).
+
+**Exemple :**
+
+```mermaid
+flowchart LR
+  A[Requête] --> B{Cache ?}
+  B -- hit --> C[Réponse]
+  B -- miss --> D[LLM] --> C
+```
+
+Règles : **code + diagramme se cumulent** quand le sujet s'y prête (max 1 diagramme) ; ils **soutiennent** l'explication pas à pas, ils ne la remplacent pas ; pas d'images bitmap (cf. tableau). S'applique aussi aux **sujets marquants de l'hebdo** (cf. [`order/weekly.md`](order/weekly.md)).
 
 ---
 
@@ -285,19 +292,22 @@ L'app rend les détails verbatim mais la lecture est nettement meilleure si l'or
 ### Contexte
 <Pourquoi ce sujet, background nécessaire. 1-2 paragraphes.>
 
-### Ce qui change concrètement
-<Détails techniques, bullets bienvenus.>
+### Comment ça marche
+<Le cours : mécanisme pas à pas. Diagramme `mermaid` si archi / flux / séquence / données.>
+
+### En pratique — exemple de code
+<≥ 1 bloc de code commenté (`lang`, ≤ 30 lignes). Avant/après si évolution.>
 
 ### Pourquoi ça compte pour toi
 <Implications pour un dev senior backend. Toujours en « tu ».>
 
-### Détails techniques | Points de vigilance | Limites
+### Pour aller plus loin | Points de vigilance | Limites
 <Sections optionnelles, à n'inclure que si vraiment pertinentes.>
 ```
 
-**Convention de longueur** (le viewer ne tronque rien, mais la lisibilité tape un mur au-delà) :
+**Convention de longueur** (le viewer ne tronque rien ; rester dense et pédagogique) :
 
-- Un sujet entier ≤ **400 mots** dans `_detail.md` (≈ 2 500 caractères)
+- **Prose** d'un sujet : viser **350-700 mots** dans `_detail.md` — les blocs de code et diagrammes **ne comptent pas** dans ce budget. Mini-cours, pas pavé de trois pages.
 - Le bloc « Pourquoi ça compte » ≤ **80 mots** — c'est la partie actionnable, doit rester serrée
 - Phrases ≤ 25 mots, paragraphes ≤ 4 phrases
 
@@ -355,15 +365,15 @@ Le viewer marque comme **nouveau** tout digest dont la date est postérieure à 
 ## 7. Checklist du workflow avant commit
 
 ```text
-[ ] Recap/YYYY-MM-DD_recap.md créé
-[ ] Pour chaque thématique active :
-    [ ] Categorie/<Cat>/YYYY-MM-DD_synthese.md créé
-    [ ] Categorie/<Cat>/YYYY-MM-DD_detail.md créé
-[ ] Tous les noms de fichiers matchent /\d{4}-\d{2}-\d{2}_(recap|synthese|detail)\.md/
+[ ] Routine catégorie — pour chaque thématique active :
+    [ ] report/categorie/<Cat>/YYYY-MM-DD_synthese.md créé
+    [ ] report/categorie/<Cat>/YYYY-MM-DD_detail.md créé
+[ ] Routine hebdo (lundi) : report/weekly/YYYY-Www_weekly.md créé
+[ ] Noms matchent /\d{4}-\d{2}-\d{2}_(synthese|detail)\.md/ ou /\d{4}-W\d{2}_weekly\.md/
 [ ] Chaque fichier commence par exactement un H1
 [ ] Aucun lien relatif vers un autre .md du repo
 [ ] UTF-8 sans BOM
-[ ] Commit : feat(data): digest YYYY-MM-DD
+[ ] Commit : feat(data): categorie YYYY-MM-DD  /  feat(data): weekly YYYY-Www
 ```
 
 Si toute la checklist passe, le viewer affichera le digest sans intervention manuelle au prochain `npm run build`.

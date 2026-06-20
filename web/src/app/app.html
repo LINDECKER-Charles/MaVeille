@@ -1,0 +1,77 @@
+<a href="#main" class="skip-link">Aller au contenu principal</a>
+
+<div class="shell">
+  <header>
+    <div class="header-inner">
+      <a routerLink="/" class="brand" aria-label="Veille — accueil">
+        <span class="logo" aria-hidden="true">V</span>
+        <span class="wordmark">Veille</span>
+      </a>
+
+      <nav class="primary-nav" aria-label="Navigation principale">
+        @for (link of navLinks; track link.path) {
+          <a
+            [routerLink]="link.path"
+            class="nav-link"
+            routerLinkActive="active"
+            [routerLinkActiveOptions]="{ exact: link.exact }"
+            #rla="routerLinkActive"
+            [attr.aria-current]="rla.isActive ? 'page' : null"
+          >
+            {{ link.label }}
+          </a>
+        }
+      </nav>
+
+      <span class="spacer"></span>
+
+      <button class="search-btn" type="button" (click)="goSearch()" aria-label="Rechercher">
+        <span class="search-icon" aria-hidden="true">⌕</span>
+        <span class="search-label">Rechercher</span>
+        <kbd aria-hidden="true">/</kbd>
+      </button>
+
+      <div class="segmented" role="radiogroup" aria-label="Densité d'affichage">
+        <button
+          type="button"
+          role="radio"
+          [attr.aria-checked]="prefs.density() === 'comfort'"
+          [class.active]="prefs.density() === 'comfort'"
+          (click)="setDensity('comfort')"
+        >
+          Confort
+        </button>
+        <button
+          type="button"
+          role="radio"
+          [attr.aria-checked]="prefs.density() === 'compact'"
+          [class.active]="prefs.density() === 'compact'"
+          (click)="setDensity('compact')"
+        >
+          Compact
+        </button>
+      </div>
+
+      <button
+        class="theme-toggle"
+        type="button"
+        (click)="toggleTheme()"
+        [attr.aria-label]="'Passer en mode ' + (theme() === 'dark' ? 'clair' : 'sombre')"
+        title="Thème"
+      >
+        <span aria-hidden="true">{{ theme() === 'dark' ? '☀' : '☾' }}</span>
+      </button>
+    </div>
+  </header>
+
+  <main id="main" tabindex="-1">
+    <router-outlet />
+  </main>
+
+  <footer>
+    <span>
+      Généré quotidiennement via Claude Cowork —
+      <a href="https://github.com" rel="noopener noreferrer">source</a>
+    </span>
+  </footer>
+</div>

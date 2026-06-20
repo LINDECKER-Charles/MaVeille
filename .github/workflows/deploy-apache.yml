@@ -1,0 +1,111 @@
+name: Deploy - Apache config
+
+# Workflow réutilisable : appelé par les pipelines test/prod après un déploiement réussi,
+# pour réappliquer (idempotent) la config Apache du périmètre concerné. Évite tout drift
+# entre le repo et le VPS. Déclenchable aussi manuellement (apply complet par défaut).
+on:
+  workflow_call:
+    inputs:
+      sites:
+        description: "Vhosts à appliquer (base names, séparés par des espaces)"
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      sites:
+        description: "Vhosts à appliquer (base names, séparés par des espaces)"
+        required: false
+        default: "veille veille-le-ssl veille-test veille-test-le-ssl"
+        type: string
+
+permissions:
+  contents: read
+
+# Sérialise tous les apply Apache (test + prod) : pas de mutation concurrente de sites-enabled.
+concurrency:
+  group: deploy-apache
+  cancel-in-progress: false
+
+env:
+  # Les vhosts sont des fichiers réels dans sites-enabled (pas des symlinks a2ensite).
+  APACHE_SITES_DIR: /etc/apache2/sites-enabled
+  REMOTE_STAGING: apache-config-staging
+
+jobs:
+  deploy-apache:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          sparse-checkout: config
+          sparse-checkout-cone-mode: true
+
+      - name: Render vhost templates
+        working-directory: config
+        env:
+          SITES: ${{ inputs.sites }}
+          VEILLE_PROD_DOMAIN: ${{ secrets.VEILLE_PROD_DOMAIN }}
+          VEILLE_TEST_DOMAIN: ${{ secrets.VEILLE_TEST_DOMAIN }}
+          VEILLE_PROD_DOCROOT: ${{ secrets.VEILLE_PROD_DOCROOT }}
+          VEILLE_TEST_DOCROOT: ${{ secrets.VEILLE_TEST_DOCROOT }}
+        run: |
+          set -euo pipefail
+          command -v envsubst >/dev/null || sudo apt-get install -y gettext-base
+          # Allowlist explicite : ne JAMAIS substituer ${APACHE_LOG_DIR} (résolu par Apache).
+          ALLOW='$VEILLE_PROD_DOMAIN $VEILLE_TEST_DOMAIN $VEILLE_PROD_DOCROOT $VEILLE_TEST_DOCROOT'
+          mkdir -p staging
+          for base in $SITES; do
+            t="${base}.conf.template"
+            [ -f "$t" ] || { echo "Template introuvable: $t" >&2; exit 1; }
+            envsubst "$ALLOW" < "$t" > "staging/${base}.conf"
+            echo "Rendered staging/${base}.conf"
+          done
+
+      - name: Copy rendered configs to VPS (staging dir)
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.VPS_IP }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "config/staging/*.conf"
+          target: ${{ env.REMOTE_STAGING }}
+          strip_components: 2
+          rm: true
+
+      - name: Apply config with configtest guard
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_IP }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: APACHE_SITES_DIR,REMOTE_STAGING
+          script: |
+            set -euo pipefail
+            STAGING="$HOME/$REMOTE_STAGING"
+            TS="$(date +%Y%m%d-%H%M%S)"
+            BACKUP="/tmp/apache-sites-backup-$TS"
+
+            echo "==> Backup $APACHE_SITES_DIR -> $BACKUP"
+            sudo cp -a "$APACHE_SITES_DIR" "$BACKUP"
+
+            echo "==> Deploy rendered vhosts"
+            for f in "$STAGING"/*.conf; do
+              sudo cp "$f" "$APACHE_SITES_DIR/$(basename "$f")"
+            done
+
+            echo "==> apache2ctl configtest"
+            if ! sudo apache2ctl configtest; then
+              echo "!! configtest FAILED — rollback"
+              sudo cp -a "$BACKUP"/. "$APACHE_SITES_DIR"/
+              sudo apache2ctl configtest
+              rm -rf "$STAGING"
+              exit 1
+            fi
+
+            echo "==> Graceful reload"
+            sudo systemctl reload apache2
+            sudo systemctl is-active apache2
+            rm -rf "$STAGING"
+            echo "==> Done (backup kept at $BACKUP)"

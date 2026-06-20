@@ -1,0 +1,67 @@
+# Prod normalement livrée par la pipeline `dev` (CI/CD - Dev → Test + Prod).
+# Ce workflow ne sert qu'au redéploiement / hotfix PROD manuel (rebuild depuis la
+# branche choisie au lancement). Déclenchement manuel uniquement → pas de double déploiement.
+name: CD - Production (manuel) - Angular
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-prod-veille
+  cancel-in-progress: true
+
+jobs:
+  # CI mutualisée (build statique + tests + e2e + lighthouse + artefact)
+  ci:
+    uses: ./.github/workflows/ci.yml
+    with:
+      artifact-name: veille-dist
+    secrets: inherit
+
+  # Déploiement = sync de fichiers statiques vers le docroot prod (pas de service).
+  deploy-prod:
+    needs: ci
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download static build artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: veille-dist
+          path: ./dist
+
+      - name: Ensure remote docroot exists
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_IP }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: DOCROOT
+          script: |
+            set -euo pipefail
+            mkdir -p "$DOCROOT"
+        env:
+          DOCROOT: ${{ secrets.VEILLE_PROD_DOCROOT }}
+
+      # rsync --delete : déploiement statique idempotent, purge les fichiers obsolètes.
+      # Le slash final sur path copie le CONTENU du dossier (pas le dossier lui-même).
+      - name: Sync static files to prod docroot
+        uses: burnett01/rsync-deployments@8.0.4
+        with:
+          switches: -avz --delete
+          path: dist/
+          remote_path: ${{ secrets.VEILLE_PROD_DOCROOT }}
+          remote_host: ${{ secrets.VPS_IP }}
+          remote_user: ${{ secrets.VPS_USER }}
+          remote_key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+  # Réapplique la config Apache prod (idempotent) après le déploiement.
+  apply-apache-config:
+    needs: deploy-prod
+    uses: ./.github/workflows/deploy-apache.yml
+    with:
+      sites: "veille veille-le-ssl"
+    secrets: inherit

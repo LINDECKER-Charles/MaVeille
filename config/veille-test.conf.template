@@ -1,0 +1,13 @@
+<VirtualHost *:80>
+    ServerName ${VEILLE_TEST_DOMAIN}
+    ServerAlias www.${VEILLE_TEST_DOMAIN}
+
+    # Site statique de test : redirection HTTP → HTTPS (301).
+    RewriteEngine On
+    RewriteCond %{SERVER_NAME} =www.${VEILLE_TEST_DOMAIN} [OR]
+    RewriteCond %{SERVER_NAME} =${VEILLE_TEST_DOMAIN}
+    RewriteRule ^ https://%{SERVER_NAME}%{REQUEST_URI} [END,NE,R=permanent]
+
+    ErrorLog ${APACHE_LOG_DIR}/veille_test_error.log
+    CustomLog ${APACHE_LOG_DIR}/veille_test_access.log combined
+</VirtualHost>

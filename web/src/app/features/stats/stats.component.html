@@ -1,0 +1,92 @@
+<header class="page-head">
+  <h1>Statistiques</h1>
+  <p class="sub">Période couverte&nbsp;: {{ periodLabel }}</p>
+</header>
+
+<section aria-labelledby="kpi-heading">
+  <h2 id="kpi-heading" class="visually-hidden">Indicateurs clés</h2>
+  <div class="kpi-grid">
+    <article class="kpi">
+      <span class="kpi-num">{{ s.totalDigests }}</span>
+      <span class="kpi-label">Digests publiés</span>
+      <span class="kpi-ctx">{{ periodLabel }}</span>
+    </article>
+
+    <article class="kpi">
+      <span class="kpi-num">{{ avgSubjects() }}</span>
+      <span class="kpi-label">Sujets / digest</span>
+      <span class="kpi-ctx">cible 8–12 par jour</span>
+    </article>
+
+    <article class="kpi">
+      <span class="kpi-num">{{ s.daysCovered }}</span>
+      <span class="kpi-label">Jours couverts</span>
+      <span class="kpi-ctx">{{ coveragePct() }}% de régularité sur la période</span>
+    </article>
+
+    <article class="kpi">
+      <span class="kpi-num">{{ s.categories.length }}</span>
+      <span class="kpi-label">Catégories actives</span>
+      <span class="kpi-ctx">extensible par hash</span>
+    </article>
+  </div>
+</section>
+
+<section class="block" aria-labelledby="heatmap-heading">
+  <header class="block-head">
+    <h2 id="heatmap-heading">Suis-je régulier&nbsp;?</h2>
+    <p>26 dernières semaines · sujets / jour</p>
+  </header>
+  <app-heatmap [activity]="s.timeline" [weeks]="26" />
+</section>
+
+<section class="block" aria-labelledby="timeline-heading">
+  <header class="block-head row">
+    <div>
+      <h2 id="timeline-heading">Le volume monte-t-il&nbsp;?</h2>
+      <p>Sujets traités par digest, dans l'ordre chronologique.</p>
+    </div>
+    <div class="seg" role="radiogroup" aria-label="Fenêtre temporelle">
+      @for (w of windowOptions; track w.id) {
+        <button
+          type="button"
+          role="radio"
+          [attr.aria-checked]="activeWindow() === w.id"
+          [class.active]="activeWindow() === w.id"
+          (click)="setWindow(w.id)"
+        >
+          {{ w.label }}
+        </button>
+      }
+    </div>
+  </header>
+  <app-line-chart [data]="timeline()" [height]="180" />
+</section>
+
+<section class="block" aria-labelledby="effort-heading">
+  <header class="block-head">
+    <h2 id="effort-heading">Où va l'effort&nbsp;?</h2>
+    <p>Cumul des sujets par catégorie sur toute la période.</p>
+  </header>
+
+  @if (s.categories.length === 0) {
+    <p class="empty">Pas encore assez de données.</p>
+  } @else {
+    <div class="effort">
+      <div class="effort-donut">
+        <app-donut [segments]="categorySegments" centerLabel="sujets" />
+      </div>
+      <div class="effort-bars">
+        <app-bar-chart [data]="categoryBars" unit="sujets" />
+        <ul class="legend" aria-label="Légende des catégories">
+          @for (c of categoryLegend; track c.label) {
+            <li>
+              <span class="legend-dot" [style.background]="c.accent" aria-hidden="true"></span>
+              <span>{{ c.label }}</span>
+            </li>
+          }
+        </ul>
+      </div>
+    </div>
+  }
+</section>

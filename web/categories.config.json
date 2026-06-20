@@ -1,0 +1,8 @@
+{
+  "categories": [
+    { "name": "Angular", "label": "Angular", "slug": "angular", "monogram": "A", "accent": "#dd0031", "order": 1, "description": "Framework front-end : releases, signals, SSR, tooling." },
+    { "name": "CSharp", "label": "C#", "slug": "csharp", "monogram": "#", "accent": "#9b4f96", "order": 2, "description": ".NET, runtime, langage, écosystème backend." },
+    { "name": "IA", "label": "IA", "slug": "ia", "monogram": "AI", "accent": "#10a37f", "order": 3, "description": "Modèles, LLM, MCP, outillage IA pour le dev." },
+    { "name": "Tech", "label": "Tech", "slug": "tech", "monogram": "⌘", "accent": "#7aa2f7", "order": 4, "description": "Veille transverse : infra, sécurité, plateformes." }
+  ]
+}
