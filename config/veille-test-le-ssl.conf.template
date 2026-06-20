@@ -1,0 +1,51 @@
+<IfModule mod_ssl.c>
+<VirtualHost *:443>
+    Protocols h2 http/1.1
+    ServerName ${VEILLE_TEST_DOMAIN}
+    ServerAlias www.${VEILLE_TEST_DOMAIN}
+
+    RemoteIPHeader X-Forwarded-For
+    RemoteIPTrustedProxy 127.0.0.1
+
+    # === Site statique de test (Angular SSG / prerender) ===
+    DocumentRoot ${VEILLE_TEST_DOCROOT}
+
+    <Directory ${VEILLE_TEST_DOCROOT}>
+        Require all granted
+        Options -Indexes +FollowSymLinks
+        AllowOverride None
+
+        # Fallback SPA : routing client-side Angular.
+        FallbackResource /index.html
+    </Directory>
+
+    # === Headers de sécurité ===
+    <IfModule mod_headers.c>
+        # CSP stricte : app statique auto-suffisante (aucun script inline, aucune ressource externe).
+        Header always set Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; form-action 'self'; upgrade-insecure-requests"
+        Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        Header always set X-Content-Type-Options "nosniff"
+        Header always set X-Frame-Options "DENY"
+        Header always set Referrer-Policy "strict-origin-when-cross-origin"
+        # Environnement de test : ne pas indexer.
+        Header always set X-Robots-Tag "noindex"
+    </IfModule>
+
+    # === Cache long pour les assets buildés (hashés / immuables) ===
+    <IfModule mod_headers.c>
+        <LocationMatch "\.(?:js|css|woff2?|png|jpe?g|gif|svg|webp|avif|ico)$">
+            Header set Cache-Control "public, max-age=31536000, immutable"
+        </LocationMatch>
+        <LocationMatch "^/index\.html$">
+            Header set Cache-Control "no-cache"
+        </LocationMatch>
+    </IfModule>
+
+    ErrorLog ${APACHE_LOG_DIR}/veille_test_error.log
+    CustomLog ${APACHE_LOG_DIR}/veille_test_access.log combined
+
+    SSLCertificateFile /etc/letsencrypt/live/${VEILLE_TEST_DOMAIN}/fullchain.pem
+    SSLCertificateKeyFile /etc/letsencrypt/live/${VEILLE_TEST_DOMAIN}/privkey.pem
+    Include /etc/letsencrypt/options-ssl-apache.conf
+</VirtualHost>
+</IfModule>

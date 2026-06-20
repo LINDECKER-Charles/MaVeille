@@ -1,0 +1,14 @@
+<VirtualHost *:80>
+    ServerName ${VEILLE_PROD_DOMAIN}
+    ServerAlias www.${VEILLE_PROD_DOMAIN}
+
+    # Site statique (Angular prérendu / SSG) : aucune app à servir en clair.
+    # On redirige tout le trafic HTTP vers HTTPS (301).
+    RewriteEngine On
+    RewriteCond %{SERVER_NAME} =www.${VEILLE_PROD_DOMAIN} [OR]
+    RewriteCond %{SERVER_NAME} =${VEILLE_PROD_DOMAIN}
+    RewriteRule ^ https://%{SERVER_NAME}%{REQUEST_URI} [END,NE,R=permanent]
+
+    ErrorLog ${APACHE_LOG_DIR}/veille_error.log
+    CustomLog ${APACHE_LOG_DIR}/veille_access.log combined
+</VirtualHost>
