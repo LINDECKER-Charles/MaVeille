@@ -1,0 +1,113 @@
+.hero {
+  margin-bottom: 1.5rem;
+}
+.hero h1 {
+  margin: 0 0 0.4rem;
+  font-size: 2rem;
+  letter-spacing: -0.02em;
+}
+.hero-sub {
+  margin: 0 0 1.5rem;
+  color: var(--text-muted);
+}
+
+.kpi-new {
+  background: var(--accent-soft) !important;
+  border-color: transparent !important;
+}
+.kpi-new dt,
+.kpi-new dd {
+  color: var(--accent) !important;
+}
+
+.empty {
+  color: var(--text-dim);
+  padding: 3rem 0;
+  text-align: center;
+}
+
+.digests,
+.results {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.result {
+  display: block;
+  padding: 1rem 1.25rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.result:hover,
+.result:focus-visible {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+  outline: none;
+}
+.result:focus-visible {
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.result-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+}
+.result-date {
+  font-weight: 600;
+  text-transform: capitalize;
+}
+.result-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.badge {
+  font-size: 0.75rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  background: var(--bg-soft);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.badge-soft {
+  text-transform: none;
+  letter-spacing: 0;
+}
+.result-snippet {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+.result-snippet ::ng-deep mark,
+.result-snippet mark {
+  background: var(--accent-soft);
+  color: var(--accent);
+  padding: 0 2px;
+  border-radius: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .result {
+    transition: none !important;
+  }
+  .result:hover,
+  .result:focus-visible {
+    transform: none;
+  }
+}

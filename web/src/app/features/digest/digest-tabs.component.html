@@ -1,0 +1,96 @@
+<div class="tabs" role="tablist" aria-label="Sections du digest">
+  @for (tab of tabList(); track tab; let i = $index) {
+    <button
+      #tabBtn
+      role="tab"
+      [id]="tabId(tab)"
+      [attr.aria-selected]="activeTab() === tab"
+      [attr.aria-controls]="panelId(tab)"
+      [tabindex]="activeTab() === tab ? 0 : -1"
+      class="tab"
+      [class.active]="activeTab() === tab"
+      [style.--tab-accent]="store.accentFor(tab)"
+      (click)="selectTab(tab)"
+      (keydown)="onTabKeydown($event, i)"
+    >
+      {{ tabLabel(tab) }}
+    </button>
+  }
+</div>
+
+@for (tab of tabList(); track tab) {
+  <div
+    role="tabpanel"
+    [id]="panelId(tab)"
+    [attr.aria-labelledby]="tabId(tab)"
+    tabindex="0"
+    [hidden]="activeTab() !== tab"
+    class="panel"
+  >
+    @if (catFor(tab); as cat) {
+      @if (hasBoth(cat)) {
+        <div class="view-toggle" role="radiogroup" aria-label="Profondeur de lecture">
+          <button
+            role="radio"
+            [attr.aria-checked]="!showDetail(tab)"
+            class="seg"
+            [class.active]="!showDetail(tab)"
+            (click)="setDetail(tab, false)"
+          >
+            Synthèse
+          </button>
+          <button
+            role="radio"
+            [attr.aria-checked]="showDetail(tab)"
+            class="seg"
+            [class.active]="showDetail(tab)"
+            (click)="setDetail(tab, true)"
+          >
+            Analyse détaillée
+          </button>
+        </div>
+      }
+
+      @if (showDetail(tab) && (cat.detailSnippets?.length ?? 0) > 0) {
+        <div class="snippet-controls" role="group" aria-label="Affichage des sujets">
+          <span class="snippet-count"
+            >{{ cat.detailSnippets!.length }} sujet{{
+              cat.detailSnippets!.length > 1 ? 's' : ''
+            }}</span
+          >
+          <div class="snippet-actions">
+            <button type="button" class="snippet-action" (click)="setAllSnippets(tab, cat, true)">
+              Tout déplier
+            </button>
+            <button type="button" class="snippet-action" (click)="setAllSnippets(tab, cat, false)">
+              Tout replier
+            </button>
+          </div>
+        </div>
+        <ul class="snippets" aria-label="Sujets détaillés">
+          @for (snip of cat.detailSnippets; track snip.index) {
+            <li>
+              <app-detail-snippet
+                [snippet]="snip"
+                [open]="isSnippetOpen(tab, snip.index)"
+                (openChange)="setSnippetOpen(tab, snip.index, $event)"
+              />
+            </li>
+          }
+        </ul>
+      } @else {
+        <div class="markdown">
+          @if (showDetail(tab) && cat.detailHtml) {
+            <app-markdown [html]="cat.detailHtml" />
+          } @else if (cat.syntheseHtml) {
+            <app-markdown [html]="cat.syntheseHtml" />
+          } @else if (cat.detailHtml) {
+            <app-markdown [html]="cat.detailHtml" />
+          } @else {
+            <p class="empty">Aucun contenu pour cette catégorie.</p>
+          }
+        </div>
+      }
+    }
+  </div>
+}

@@ -1,0 +1,49 @@
+<a href="#main" class="skip-link">Aller au contenu principal</a>
+
+<div class="shell">
+  <header>
+    <div class="header-inner">
+      <a routerLink="/" class="brand" aria-label="Veille — accueil">
+        <span class="dot" aria-hidden="true"></span>
+        <span class="brand-text">Veille</span>
+        <span class="brand-sub">tech digests</span>
+      </a>
+
+      <nav class="primary-nav" aria-label="Navigation principale">
+        @for (link of navLinks; track link.path) {
+          <a
+            [routerLink]="link.path"
+            class="nav-link"
+            routerLinkActive="active"
+            [routerLinkActiveOptions]="{ exact: link.exact }"
+            #rla="routerLinkActive"
+            [attr.aria-current]="rla.isActive ? 'page' : null"
+          >
+            {{ link.label }}
+          </a>
+        }
+      </nav>
+
+      <button
+        class="theme-toggle"
+        type="button"
+        (click)="toggleTheme()"
+        [attr.aria-label]="'Passer en mode ' + (theme() === 'dark' ? 'clair' : 'sombre')"
+        title="Thème"
+      >
+        <span aria-hidden="true">{{ theme() === 'dark' ? '☾' : '☀' }}</span>
+      </button>
+    </div>
+  </header>
+
+  <main id="main" tabindex="-1">
+    <router-outlet />
+  </main>
+
+  <footer>
+    <span>
+      Généré quotidiennement via Claude Cowork —
+      <a href="https://github.com" rel="noopener noreferrer">source</a>
+    </span>
+  </footer>
+</div>

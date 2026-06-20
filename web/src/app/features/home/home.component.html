@@ -1,0 +1,63 @@
+<section class="hero">
+  <h1>Digests quotidiens</h1>
+  <p class="hero-sub">Veille tech automatisée, générée chaque matin par Claude.</p>
+
+  <dl class="kpis" aria-label="Statistiques globales">
+    <div>
+      <dt>Digests</dt>
+      <dd>{{ totals.digests }}</dd>
+    </div>
+    <div>
+      <dt>Sujets analysés</dt>
+      <dd>{{ totals.subjects }}</dd>
+    </div>
+    <div>
+      <dt>Sources citées</dt>
+      <dd>{{ totals.sources }}</dd>
+    </div>
+    @if (newCount() > 0) {
+      <div class="kpi-new">
+        <dt>Nouveau</dt>
+        <dd>+{{ newCount() }}</dd>
+      </div>
+    }
+  </dl>
+</section>
+
+<app-search-box (queryChange)="onQueryChange($event)" />
+
+@if (isSearching()) {
+  <ul id="results-list" class="results" aria-label="Résultats de recherche">
+    @if (hits().length === 0) {
+      <li class="empty">Aucun résultat. Essaie un autre mot-clé.</li>
+    } @else {
+      @for (h of hits(); track h.date + h.scope + h.type) {
+        <li>
+          <a class="result" [routerLink]="['/digest', h.date]">
+            <div class="result-head">
+              <span class="result-date">{{ h.date | frDate }}</span>
+              <span class="result-tags">
+                <span class="badge">{{ scopeLabel(h.scope) }}</span>
+                <span class="badge badge-soft">{{ typeLabel(h.type) }}</span>
+                @if (h.score > 1) {
+                  <span class="badge badge-soft">{{ h.score }} matchs</span>
+                }
+              </span>
+            </div>
+            <p class="result-snippet" [innerHTML]="safeSnippet(h.snippet)"></p>
+          </a>
+        </li>
+      }
+    }
+  </ul>
+} @else if (digests.length === 0) {
+  <p class="empty">Aucun digest disponible pour le moment.</p>
+} @else {
+  <ul id="results-list" class="digests" aria-label="Liste des digests">
+    @for (d of digests; track d.date) {
+      <li>
+        <app-digest-card [digest]="d" [isNew]="isNew(d.date)" />
+      </li>
+    }
+  </ul>
+}

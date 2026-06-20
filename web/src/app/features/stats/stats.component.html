@@ -1,0 +1,72 @@
+<header class="page-head">
+  <h1>Statistiques</h1>
+  <p class="sub">Vue agrégée sur l'ensemble du corpus de digests.</p>
+</header>
+
+<section aria-labelledby="kpi-heading">
+  <h2 id="kpi-heading" class="visually-hidden">Indicateurs clés</h2>
+  <dl class="kpis">
+    <div>
+      <dt>Digests</dt>
+      <dd>{{ s.totalDigests }}</dd>
+    </div>
+    <div>
+      <dt>Sujets analysés</dt>
+      <dd>{{ s.totalSubjects }}</dd>
+    </div>
+    <div>
+      <dt>Sources citées</dt>
+      <dd>{{ s.totalSources }}</dd>
+    </div>
+    <div>
+      <dt>Sujets / digest</dt>
+      <dd>{{ avgSubjects() }}</dd>
+    </div>
+    <div>
+      <dt>Période</dt>
+      <dd class="period">{{ periodLabel }}</dd>
+    </div>
+  </dl>
+</section>
+
+<section class="block" aria-labelledby="heatmap-heading">
+  <header class="block-head">
+    <h2 id="heatmap-heading">Activité quotidienne</h2>
+    <p>Intensité = nombre de sujets analysés par jour, sur les 26 dernières semaines.</p>
+  </header>
+  <app-heatmap [activity]="s.timeline" [weeks]="26" />
+</section>
+
+<section class="block" aria-labelledby="timeline-heading">
+  <header class="block-head">
+    <h2 id="timeline-heading">Évolution des sujets par digest</h2>
+    <p>Volume de sujets traités, dans l'ordre chronologique.</p>
+  </header>
+  <app-line-chart [data]="s.timeline" />
+</section>
+
+<div class="two-col">
+  <section class="block" aria-labelledby="cat-heading">
+    <header class="block-head">
+      <h2 id="cat-heading">Sujets par catégorie</h2>
+      <p>Cumul sur toute la période.</p>
+    </header>
+    @if (s.categories.length === 0) {
+      <p class="empty">Pas encore assez de données.</p>
+    } @else {
+      <app-bar-chart [data]="categoryBars" unit="sujets" />
+    }
+  </section>
+
+  <section class="block" aria-labelledby="src-heading">
+    <header class="block-head">
+      <h2 id="src-heading">Sources par catégorie</h2>
+      <p>Indicateur de la diversité des références citées.</p>
+    </header>
+    @if (s.categories.length === 0) {
+      <p class="empty">Pas encore assez de données.</p>
+    } @else {
+      <app-bar-chart [data]="sourceBars" unit="sources" />
+    }
+  </section>
+</div>

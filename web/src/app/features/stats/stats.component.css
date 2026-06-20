@@ -1,0 +1,58 @@
+.page-head {
+  margin-bottom: 2rem;
+}
+.page-head h1 {
+  margin: 0 0 0.4rem;
+  font-size: 2rem;
+  letter-spacing: -0.02em;
+}
+.sub {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.kpis {
+  margin-bottom: 2.5rem;
+}
+.kpis dd.period {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.block {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.block-head {
+  margin-bottom: 1.25rem;
+}
+.block-head h2 {
+  margin: 0 0 0.25rem;
+  font-size: 1.1rem;
+}
+.block-head p {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 0.88rem;
+}
+
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+@media (max-width: 720px) {
+  .two-col {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+}
+
+.empty {
+  color: var(--text-dim);
+  text-align: center;
+  padding: 2rem 0;
+}
