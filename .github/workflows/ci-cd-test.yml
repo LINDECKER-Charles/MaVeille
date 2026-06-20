@@ -1,0 +1,127 @@
+# Pipeline unique de livraison : un push sur `dev` build une fois puis déploie
+# en TEST et en PROD (même artefact). Le seul gate avant prod est la CI.
+name: CI/CD - Dev → Test + Prod - Angular
+
+on:
+  push:
+    branches:
+      - dev
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deploy-test-veille
+  cancel-in-progress: true
+
+jobs:
+  # CI mutualisée (build statique + tests + e2e + lighthouse + artefact)
+  ci:
+    uses: ./.github/workflows/ci.yml
+    with:
+      artifact-name: veille-dist
+    secrets: inherit
+
+  # Promotion dev -> test après une CI verte.
+  merge-test:
+    needs: ci
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Merge dev into test
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+
+          git fetch origin dev test
+          git checkout test
+          git merge origin/dev --no-ff -m "CI: merge dev into test"
+          git push origin test
+
+  # Déploiement = sync de fichiers statiques vers le docroot test (pas de service).
+  deploy-test:
+    needs: ci
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download static build artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: veille-dist
+          path: ./dist
+
+      - name: Ensure remote docroot exists
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_IP }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: DOCROOT
+          script: |
+            set -euo pipefail
+            mkdir -p "$DOCROOT"
+        env:
+          DOCROOT: ${{ secrets.VEILLE_TEST_DOCROOT }}
+
+      # rsync --delete : déploiement statique idempotent, purge les fichiers obsolètes.
+      # Le slash final sur path copie le CONTENU du dossier (pas le dossier lui-même).
+      - name: Sync static files to test docroot
+        uses: burnett01/rsync-deployments@8.0.4
+        with:
+          switches: -avz --delete
+          path: dist/
+          remote_path: ${{ secrets.VEILLE_TEST_DOCROOT }}
+          remote_host: ${{ secrets.VPS_IP }}
+          remote_user: ${{ secrets.VPS_USER }}
+          remote_key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+  # Promotion directe en PROD depuis dev : MÊME artefact que test (bits identiques),
+  # pas de rebuild. Le gate avant prod = la CI (build + tests + e2e + lighthouse).
+  deploy-prod:
+    needs: ci
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download static build artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: veille-dist
+          path: ./dist
+
+      - name: Ensure remote docroot exists
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_IP }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: DOCROOT
+          script: |
+            set -euo pipefail
+            mkdir -p "$DOCROOT"
+        env:
+          DOCROOT: ${{ secrets.VEILLE_PROD_DOCROOT }}
+
+      - name: Sync static files to prod docroot
+        uses: burnett01/rsync-deployments@8.0.4
+        with:
+          switches: -avz --delete
+          path: dist/
+          remote_path: ${{ secrets.VEILLE_PROD_DOCROOT }}
+          remote_host: ${{ secrets.VPS_IP }}
+          remote_user: ${{ secrets.VPS_USER }}
+          remote_key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+  # Réapplique la config Apache des 4 vhosts (test + prod) après les déploiements.
+  apply-apache-config:
+    needs: [deploy-test, deploy-prod]
+    uses: ./.github/workflows/deploy-apache.yml
+    with:
+      sites: "veille veille-le-ssl veille-test veille-test-le-ssl"
+    secrets: inherit
