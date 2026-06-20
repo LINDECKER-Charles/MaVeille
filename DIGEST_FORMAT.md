@@ -94,16 +94,23 @@ Veille/
 
 <Pourquoi ce sujet existe, ce qui l'a amené, le background nécessaire. 1-2 paragraphes.>
 
-### Ce qui change concrètement
+### Comment ça marche
 
-<Détails techniques précis. Bullets bienvenus.>
+<Le cœur pédagogique : explique le mécanisme / concept PAS À PAS, comme un mini-cours.
+Ajoute un diagramme Mermaid (bloc `mermaid`) dès que le sujet touche une archi, un flux,
+une séquence ou un modèle de données.>
+
+### En pratique — exemple de code
+
+<Au moins un bloc de code commenté (`lang` explicite, ≤ 30 lignes) montrant l'usage réel.
+AVANT / APRÈS si c'est une évolution de code.>
 
 ### Pourquoi ça compte pour toi
 
 <Implications pour un dev senior backend (Angular, .NET, Symfony, PostgreSQL).
 Toujours formuler en « tu », jamais en « nous ».>
 
-### Détails techniques | Points de vigilance | Limites
+### Pour aller plus loin | Points de vigilance | Limites
 
 <Sections optionnelles selon le sujet.>
 
@@ -141,12 +148,12 @@ Toujours formuler en « tu », jamais en « nous ».>
 
 ---
 
-### 3.1 Exemples de code & diagrammes — fortement encouragés
+### 3.1 Approche pédagogique — code & diagrammes (mini-cours par sujet)
 
-Une news gagne en valeur avec du **concret**. Côté rendu, l'app supporte ces deux artefacts ; côté production, les routines ([`order/`](order/)) en font une **obligation : au minimum un artefact par sujet** (un diagramme **ou** un bloc de code, voire les deux ; avant/après pour une évolution de code ; max 1 diagramme par sujet).
+Une news ne vaut que si on la **comprend**. Côté production, les routines ([`order/`](order/)) traitent **chaque sujet en mini-cours** : une explication « comment ça marche » pas à pas, **plus** au moins un artefact concret. Vise le combo **code + diagramme + explication** ; le plancher absolu est **un** artefact, jamais zéro.
 
-- **Code** : un extrait minimal et parlant (` ```ts `, ` ```csharp `, ` ```bash `, ` ```json `…), **≤ 25 lignes**, qui illustre l'usage réel (appel d'API, config, migration EF Core, commande CLI). Toujours préciser le langage → coloration au build.
-- **Diagramme Mermaid** (` ```mermaid `) : pour visualiser une **architecture**, un **flux**, une **séquence** ou un **modèle de données**. Particulièrement pertinent pour l'**IA** (pipeline RAG, orchestration d'agents, flux d'inférence) et la **Tech/archi** (déploiement, réseau, schéma BDD). **1 diagramme par sujet max**, lisible (≤ ~12 nœuds).
+- **Code** : extrait minimal et parlant (` ```ts `, ` ```csharp `, ` ```bash `, ` ```json `…), **≤ 30 lignes**, qui illustre l'usage réel (appel d'API, config, migration EF Core, commande CLI). Toujours préciser le langage → coloration au build. **AVANT / APRÈS** pour une évolution de code. Plusieurs blocs autorisés si ça sert la compréhension.
+- **Diagramme Mermaid** (` ```mermaid `) : pour visualiser une **architecture**, un **flux**, une **séquence** ou un **modèle de données**. **Obligatoire dès que le sujet est de cette nature** ; particulièrement pertinent pour l'**IA** (pipeline RAG, orchestration d'agents, flux d'inférence) et la **Tech/archi** (déploiement, réseau, schéma BDD). **1 diagramme par sujet max**, lisible (≤ ~12 nœuds).
 
 **Exemple :**
 
@@ -157,7 +164,7 @@ flowchart LR
   B -- miss --> D[LLM] --> C
 ```
 
-Règles : un seul artefact visuel par sujet en général ; le code/diagramme **illustre**, il ne remplace pas l'analyse ; pas d'images bitmap (cf. tableau).
+Règles : **code + diagramme se cumulent** quand le sujet s'y prête (max 1 diagramme) ; ils **soutiennent** l'explication pas à pas, ils ne la remplacent pas ; pas d'images bitmap (cf. tableau). S'applique aussi aux **sujets marquants de l'hebdo** (cf. [`order/weekly.md`](order/weekly.md)).
 
 ---
 
@@ -285,19 +292,22 @@ L'app rend les détails verbatim mais la lecture est nettement meilleure si l'or
 ### Contexte
 <Pourquoi ce sujet, background nécessaire. 1-2 paragraphes.>
 
-### Ce qui change concrètement
-<Détails techniques, bullets bienvenus.>
+### Comment ça marche
+<Le cours : mécanisme pas à pas. Diagramme `mermaid` si archi / flux / séquence / données.>
+
+### En pratique — exemple de code
+<≥ 1 bloc de code commenté (`lang`, ≤ 30 lignes). Avant/après si évolution.>
 
 ### Pourquoi ça compte pour toi
 <Implications pour un dev senior backend. Toujours en « tu ».>
 
-### Détails techniques | Points de vigilance | Limites
+### Pour aller plus loin | Points de vigilance | Limites
 <Sections optionnelles, à n'inclure que si vraiment pertinentes.>
 ```
 
-**Convention de longueur** (le viewer ne tronque rien, mais la lisibilité tape un mur au-delà) :
+**Convention de longueur** (le viewer ne tronque rien ; rester dense et pédagogique) :
 
-- Un sujet entier ≤ **400 mots** dans `_detail.md` (≈ 2 500 caractères)
+- **Prose** d'un sujet : viser **350-700 mots** dans `_detail.md` — les blocs de code et diagrammes **ne comptent pas** dans ce budget. Mini-cours, pas pavé de trois pages.
 - Le bloc « Pourquoi ça compte » ≤ **80 mots** — c'est la partie actionnable, doit rester serrée
 - Phrases ≤ 25 mots, paragraphes ≤ 4 phrases
 
@@ -347,23 +357,4 @@ Le viewer met en cache au build. Si tu modifies un digest passé :
 Le viewer marque comme **nouveau** tout digest dont la date est postérieure à `localStorage.veille-last-seen-date`. Implications :
 
 - Pas besoin de balise particulière dans le markdown — c'est la date du fichier qui pilote.
-- Le marqueur est **par utilisateur** (localStorage). Pas de tracking serveur.
-- Un user qui ouvre la page le matin verra « +1 » si tu as commité hier soir, à condition que la date dans le nom soit bien `YYYY-MM-DD` du jour de génération (pas du jour précédent).
-
----
-
-## 7. Checklist du workflow avant commit
-
-```text
-[ ] Routine catégorie — pour chaque thématique active :
-    [ ] report/categorie/<Cat>/YYYY-MM-DD_synthese.md créé
-    [ ] report/categorie/<Cat>/YYYY-MM-DD_detail.md créé
-[ ] Routine hebdo (lundi) : report/weekly/YYYY-Www_weekly.md créé
-[ ] Noms matchent /\d{4}-\d{2}-\d{2}_(synthese|detail)\.md/ ou /\d{4}-W\d{2}_weekly\.md/
-[ ] Chaque fichier commence par exactement un H1
-[ ] Aucun lien relatif vers un autre .md du repo
-[ ] UTF-8 sans BOM
-[ ] Commit : feat(data): categorie YYYY-MM-DD  /  feat(data): weekly YYYY-Www
-```
-
-Si toute la checklist passe, le viewer affichera le digest sans intervention manuelle au prochain `npm run build`.
+- Le marqueur est **par utilisateur** (localStorage). Pas de tracking se

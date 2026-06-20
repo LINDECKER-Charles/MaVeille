@@ -42,7 +42,7 @@ Catégories actuelles : `Angular`, `CSharp`, `IA`, `Tech`. Ajouter une catégori
 → Analyse complète : `YYYY-MM-DD_detail.md`
 ```
 
-**`_detail.md`** (analyses approfondies, un H2 numéroté par sujet) :
+**`_detail.md`** (un **mini-cours** par sujet, H2 numéroté) :
 ```markdown
 # <Cat> — Détail du <jour> <date en lettres>
 
@@ -52,15 +52,21 @@ Catégories actuelles : `Angular`, `CSharp`, `IA`, `Tech`. Ajouter une catégori
 **Date :** <date de publication>
 
 ### Contexte
-<Background nécessaire. 1-2 paragraphes.>
+<Background : d'où ça vient, quel problème c'est censé résoudre. 1-2 paragraphes.>
 
-### Ce qui change concrètement
-<Détails techniques, bullets bienvenus.>
+### Comment ça marche
+<LE CŒUR PÉDAGOGIQUE. Explique le mécanisme / concept PAS À PAS, comme un cours.
+Ajoute un diagramme Mermaid (bloc `mermaid`) dès que le sujet touche une archi,
+un flux, une séquence ou un modèle de données.>
+
+### En pratique — exemple de code
+<AU MOINS un bloc de code commenté (`lang` explicite, ≤ 30 lignes) montrant l'usage réel.
+AVANT / APRÈS si c'est une évolution de code. Dis en une phrase ce que fait le code.>
 
 ### Pourquoi ça compte pour toi
 <Implications pour un dev senior backend. En « tu ». ≤ 80 mots.>
 
-### Détails techniques | Points de vigilance | Limites
+### Pour aller plus loin | Pièges | Limites
 <Optionnel.>
 
 ---
@@ -74,24 +80,28 @@ Catégories actuelles : `Angular`, `CSharp`, `IA`, `Tech`. Ajouter une catégori
 - Sujets comptés via `^## \d+\.\s+` → numérotation `## 1.`, `## 2.` séquentielle, **H2 obligatoire**.
 - Sources comptées via `^\*\*Source\s*:\*\*` → une ligne `**Source :**` par sujet, singulier, sur sa propre ligne.
 - Un seul `# H1` en première ligne. URLs absolues. Séparateur `---` entre sujets.
-- Cibles « digest idéal » : 2-3 sujets/catégorie, 8-12 sujets/jour au total, 3-4 catégories.
+- Cibles : 2-3 sujets/catégorie, 8-12 sujets/jour, 3-4 catégories — **chacun traité en mini-cours** (en cas d'arbitrage, profondeur > nombre).
 
-## Exemples concrets — OBLIGATOIRE pour chaque sujet
+## Approche pédagogique — un mini-cours par sujet (OBLIGATOIRE)
 
-**Chaque sujet (`## N.`) du `_detail.md` doit porter au minimum UN artefact illustratif** — un **diagramme Mermaid** ou un **bloc de code** (les deux si le sujet le justifie). **Jamais zéro.** Choisir selon la nature du sujet :
+**Chaque sujet (`## N.`) du `_detail.md` est un mini-cours, pas une brève.** Objectif : qu'après lecture, tu **comprennes le mécanisme et puisses l'appliquer**, pas juste que tu sois informé. Chaque sujet doit donc porter :
 
-- **Code** (` ```lang `, langage explicite, ≤ 25 lignes) → par défaut pour une **feature de code** : API, config, migration EF Core, commande CLI, usage de lib.
-  - **Évolution de code (nouvelle API, breaking change, migration, refactor) → montrer un AVANT / APRÈS** : deux blocs étiquetés, ou un seul bloc commenté `// Avant` / `// Après`. C'est le format le plus parlant pour « ce qui change concrètement ».
+1. **Une explication « Comment ça marche »** qui déroule le concept **pas à pas** (le cours).
+2. **Au moins un exemple de code commenté** (` ```lang `, langage explicite, ≤ 30 lignes) montrant l'usage réel — API, config, migration EF Core, commande CLI, usage de lib. Plusieurs blocs autorisés si ça aide.
+   - **Évolution de code (nouvelle API, breaking change, migration, refactor) → AVANT / APRÈS** : deux blocs étiquetés, ou un bloc commenté `// Avant` / `// Après`.
+3. **Un diagramme Mermaid** (` ```mermaid `, ≤ ~12 nœuds) **dès que le sujet touche une archi / un flux / une séquence / un modèle de données**. Obligatoire pour ce type de sujet ; **fortement recommandé pour l'IA** (pipeline RAG, orchestration d'agents, flux d'inférence) et la Tech/archi. **Max 1 diagramme par sujet.**
+
+**Plancher absolu, jamais en-dessous : 1 exemple de code OU 1 diagramme.** Mais vise le combo **code + schéma + explication pas à pas** — c'est ça, le « cours explicatif ». Le code/diagramme **soutient** l'explication, il ne la remplace pas.
+
+Exemple de combo (CSharp — évolution d'API) :
 
 ```csharp
-// Avant — EF Core 9
+// Avant — EF Core 9 : requête LINQ recompilée à chaque appel
 var users = await db.Users.Where(u => u.Active).ToListAsync();
 
-// Après — EF Core 10, requête compilée nommée
+// Après — EF Core 10 : requête compilée nommée, réutilisée (moins d'alloc, plan caché)
 var users = await db.Users.GetActiveCompiledAsync();
 ```
-
-- **Diagramme Mermaid** (` ```mermaid `) → pour un sujet **archi / flux / séquence / modèle de données**. **Privilégier le diagramme pour l'IA** (pipeline RAG, orchestration d'agents, flux d'inférence) et la Tech/archi (déploiement, réseau, schéma BDD). ≤ ~12 nœuds.
 
 ```mermaid
 flowchart LR
@@ -99,7 +109,7 @@ flowchart LR
   R --> L[LLM] --> A[Réponse]
 ```
 
-**Règle de choix** : feature de code → **code** (avant/après si c'est une évolution) ; concept / flux / architecture → **diagramme**. Minimum 1 par sujet, **max 1 diagramme Mermaid par sujet** (un code en plus reste possible). L'artefact illustre, il ne remplace pas l'analyse texte. Rendu : coloration au build + diagramme dans l'app (cf. `DIGEST_FORMAT.md §3.1`).
+**Longueur** : vise **350-700 mots de prose par sujet** (les blocs de code et diagrammes **ne comptent pas** dans ce budget). Dense et pédagogique — ni brève sèche, ni pavé de trois pages. Rendu : coloration au build + diagramme dans l'app (cf. `DIGEST_FORMAT.md §3.1`).
 
 ## Frontmatter optionnel (recommandé)
 
@@ -114,19 +124,4 @@ importance: high      # high | medium | low
 sources_count: 3
 ---
 ```
-Exploité par l'app pour badges « HIGH IMPACT », filtres par tag, scoring de recherche. Absent ⇒ l'app dérive tout par heuristique (rétrocompatible).
-
-## Commit & push automatiques
-
-Une fois tous les fichiers du jour générés et la checklist (`DIGEST_FORMAT.md §7`) validée, la routine **commit ET push automatiquement** — aucune intervention manuelle :
-
-```bash
-git add report/categorie/
-git commit -m "feat(data): categorie YYYY-MM-DD"
-git push origin dev
-```
-
-- **Branche : toujours `dev`.** La pipeline `dev` build une fois puis déploie **test ET prod** (le seul gate avant prod est la CI : build + tests + e2e + lighthouse). Le push **déclenche la CI/CD**.
-- **Un seul commit** par run quotidien, toutes catégories confondues.
-- **Rien de neuf** (journée 100 % dédupliquée) → ne rien committer (pas de commit vide).
-- En cas de conflit au push (`non-fast-forward`), faire `git pull --rebase` puis re-push.
+Exploité par l'app pour badges « HIGH IMPACT », f

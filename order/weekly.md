@@ -14,7 +14,7 @@ report/weekly/YYYY-Www_weekly.md      ← ex. report/weekly/2026-W25_weekly.md
 
 ## Rôle
 
-Le hebdo est la pièce **éditoriale transversale** (l'équivalent de l'ancien recap, mais à la semaine) : il prend de la hauteur sur les digests quotidiens par catégorie de la semaine, dégage les fils rouges, et donne l'actionnable. Il **ne recopie pas** le détail quotidien — il synthétise et relie.
+Le hebdo est la pièce **éditoriale transversale** (l'équivalent de l'ancien recap, mais à la semaine) : il prend de la hauteur sur les digests quotidiens par catégorie de la semaine, dégage les fils rouges, et donne l'actionnable. Il **ne recopie pas** le détail quotidien — il synthétise et relie. **Il reste pédagogique** : les sujets marquants sont expliqués (« comment ça marche ») et illustrés (code ou schéma), pas seulement cités.
 
 ## Source
 
@@ -30,7 +30,9 @@ qui ont traversé la semaine. 3-4 phrases.>
 
 ## <Catégorie ou fil rouge 1>
 <2-4 phrases denses : ce qui a bougé cette semaine, chiffres clés (versions, %, dates),
-actions concrètes. Croiser les enjeux entre jours.>
+actions concrètes. Croiser les enjeux entre jours. Pour le sujet le plus marquant de la
+section : un court « comment ça marche » + un exemple de code (bloc `lang`) OU un diagramme
+(bloc `mermaid`), avant/après si c'est une évolution.>
 
 ## <Catégorie ou fil rouge 2>
 …
@@ -53,31 +55,9 @@ actions concrètes. Croiser les enjeux entre jours.>
 - URLs absolues uniquement ; pas de liens relatifs vers d'autres `.md`.
 - UTF-8 sans BOM. Nom de fichier matchant `YYYY-Www_weekly.md`.
 
-## Exemples concrets — code & diagrammes (optionnel)
+## Exemples concrets — pédagogie aussi dans l'hebdo (OBLIGATOIRE sur les sujets marquants)
 
-Le hebdo est synthétique, mais **un** diagramme Mermaid (` ```mermaid `) peut résumer un fil rouge de la semaine (ex. convergence d'un écosystème, schéma d'archi récurrent), ou un court extrait de code (` ```lang `) marquant. Maximum 1-2 sur tout le rapport. Cf. `DIGEST_FORMAT.md §3.1`.
+Le hebdo prend de la hauteur, mais il reste **pédagogique** : il n'énumère pas les news, il en **explique** les plus importantes. Règles :
 
-## Frontmatter optionnel
-
-```yaml
----
-week: 2026-W25
-range: 2026-06-15/2026-06-21
-type: weekly
-categories: [Angular, CSharp, IA, Tech]
-highlights: 5
----
-```
-
-## Commit & push automatiques
-
-Une fois le rapport hebdo généré, la routine **commit ET push automatiquement** :
-
-```bash
-git add report/weekly/
-git commit -m "feat(data): weekly YYYY-Www"   # ex. weekly 2026-W25
-git push origin dev
-```
-
-- **Branche : toujours `dev`** (comme la routine catégorie) → déploie test + prod via la CI. Le push **déclenche la CI/CD**.
-- En cas de conflit (`non-fast-forward`) : `git pull --rebase` puis re-push.
+- **Top de la semaine** : chaque sujet du Top porte un **mini-traitement pédagogique** — un court « comment ça marche » + **un exemple de code commenté OU un diagramme Mermaid** (le plus parlant pour le sujet).
+- **Par catégorie** : pour le sujet le plus marquant, ajoute **au moins un artefact** (code ` ```lang ` ≤ 30 lignes, ou diagramme ` ```mermaid ` ≤ ~12 nœuds ; a
