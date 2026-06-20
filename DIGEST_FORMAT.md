@@ -357,4 +357,23 @@ Le viewer met en cache au build. Si tu modifies un digest passé :
 Le viewer marque comme **nouveau** tout digest dont la date est postérieure à `localStorage.veille-last-seen-date`. Implications :
 
 - Pas besoin de balise particulière dans le markdown — c'est la date du fichier qui pilote.
-- Le marqueur est **par utilisateur** (localStorage). Pas de tracking se
+- Le marqueur est **par utilisateur** (localStorage). Pas de tracking serveur.
+- Un user qui ouvre la page le matin verra « +1 » si tu as commité hier soir, à condition que la date dans le nom soit bien `YYYY-MM-DD` du jour de génération (pas du jour précédent).
+
+---
+
+## 7. Checklist du workflow avant commit
+
+```text
+[ ] Routine catégorie — pour chaque thématique active :
+    [ ] report/categorie/<Cat>/YYYY-MM-DD_synthese.md créé
+    [ ] report/categorie/<Cat>/YYYY-MM-DD_detail.md créé
+[ ] Routine hebdo (lundi) : report/weekly/YYYY-Www_weekly.md créé
+[ ] Noms matchent /\d{4}-\d{2}-\d{2}_(synthese|detail)\.md/ ou /\d{4}-W\d{2}_weekly\.md/
+[ ] Chaque fichier commence par exactement un H1
+[ ] Aucun lien relatif vers un autre .md du repo
+[ ] UTF-8 sans BOM
+[ ] Commit : feat(data): categorie YYYY-MM-DD  /  feat(data): weekly YYYY-Www
+```
+
+Si toute la checklist passe, le viewer affichera le digest sans intervention manuelle au prochain `npm run build`.

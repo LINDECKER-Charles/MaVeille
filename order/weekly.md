@@ -60,4 +60,30 @@ section : un court « comment ça marche » + un exemple de code (bloc `lang`) O
 Le hebdo prend de la hauteur, mais il reste **pédagogique** : il n'énumère pas les news, il en **explique** les plus importantes. Règles :
 
 - **Top de la semaine** : chaque sujet du Top porte un **mini-traitement pédagogique** — un court « comment ça marche » + **un exemple de code commenté OU un diagramme Mermaid** (le plus parlant pour le sujet).
-- **Par catégorie** : pour le sujet le plus marquant, ajoute **au moins un artefact** (code ` ```lang ` ≤ 30 lignes, ou diagramme ` ```mermaid ` ≤ ~12 nœuds ; a
+- **Par catégorie** : pour le sujet le plus marquant, ajoute **au moins un artefact** (code ` ```lang ` ≤ 30 lignes, ou diagramme ` ```mermaid ` ≤ ~12 nœuds ; avant/après si évolution de code).
+- Reste dense : on **explique l'essentiel**, on ne recopie pas le détail quotidien. Privilégie les exemples qui éclairent un fil rouge de la semaine (convergence d'écosystème, migration type, nouveau pattern). **Max 1 diagramme par sujet.** Cf. `DIGEST_FORMAT.md §3.1`.
+
+## Frontmatter optionnel
+
+```yaml
+---
+week: 2026-W25
+range: 2026-06-15/2026-06-21
+type: weekly
+categories: [Angular, CSharp, IA, Tech]
+highlights: 5
+---
+```
+
+## Commit & push automatiques
+
+Une fois le rapport hebdo généré, la routine **commit ET push automatiquement** :
+
+```bash
+git add report/weekly/
+git commit -m "feat(data): weekly YYYY-Www"   # ex. weekly 2026-W25
+git push origin dev
+```
+
+- **Branche : toujours `dev`** (comme la routine catégorie) → déploie test + prod via la CI. Le push **déclenche la CI/CD**.
+- En cas de conflit (`non-fast-forward`) : `git pull --rebase` puis re-push.

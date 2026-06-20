@@ -124,4 +124,19 @@ importance: high      # high | medium | low
 sources_count: 3
 ---
 ```
-Exploité par l'app pour badges « HIGH IMPACT », f
+Exploité par l'app pour badges « HIGH IMPACT », filtres par tag, scoring de recherche. Absent ⇒ l'app dérive tout par heuristique (rétrocompatible).
+
+## Commit & push automatiques
+
+Une fois tous les fichiers du jour générés et la checklist (`DIGEST_FORMAT.md §7`) validée, la routine **commit ET push automatiquement** — aucune intervention manuelle :
+
+```bash
+git add report/categorie/
+git commit -m "feat(data): categorie YYYY-MM-DD"
+git push origin dev
+```
+
+- **Branche : toujours `dev`.** La pipeline `dev` build une fois puis déploie **test ET prod** (le seul gate avant prod est la CI : build + tests + e2e + lighthouse). Le push **déclenche la CI/CD**.
+- **Un seul commit** par run quotidien, toutes catégories confondues.
+- **Rien de neuf** (journée 100 % dédupliquée) → ne rien committer (pas de commit vide).
+- En cas de conflit au push (`non-fast-forward`), faire `git pull --rebase` puis re-push.
