@@ -4,10 +4,15 @@
    Theming via CSS custom properties sous :root[data-theme] + :root:not([data-theme]).
    ========================================================================== */
 
+/* Polices self-hosted (woff2 bundlés) — aucune ressource externe, CSP-safe.
+   Polices variables : couvrent tous les poids utilisés (Inter 400→800, dont 450). */
+@import '@fontsource-variable/inter/index.css';
+@import '@fontsource-variable/jetbrains-mono/index.css';
+
 :root {
   /* --- Typo --- */
-  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Consolas, monospace;
+  --font-sans: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Consolas, monospace;
 
   /* --- Rayons (spec §1.6) --- */
   --radius-sm: 6px;

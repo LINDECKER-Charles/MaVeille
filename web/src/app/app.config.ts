@@ -2,12 +2,15 @@ import { ApplicationConfig, provideBrowserGlobalErrorListeners, provideZoneChang
 import { provideRouter } from '@angular/router';
 
 import { routes } from './app.routes';
-import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
+import { provideClientHydration } from '@angular/platform-browser';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideZoneChangeDetection({ eventCoalescing: true }),
-    provideRouter(routes), provideClientHydration(withEventReplay())
+    // Hydration sans withEventReplay() : l'event replay injecte des <script> inline
+    // (ng-event-dispatch-contract + __jsaction_bootstrap) incompatibles avec la CSP
+    // stricte (script-src 'self'). Le transfer state reste en <script application/json> (data, non exécuté).
+    provideRouter(routes), provideClientHydration()
   ]
 };
