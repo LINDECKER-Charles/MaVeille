@@ -122,6 +122,7 @@
         id="results-list"
         class="results"
         aria-label="Résultats de recherche"
+        tabindex="0"
         (keydown)="onResultsKeydown($event)"
       >
         @for (h of hits(); track h.date + h.scope + h.type; let i = $index) {
