@@ -1,11 +1,11 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import type { DayActivity } from '../data/types';
 
-const PAD_L = 32;
+const PAD_L = 30;
 const PAD_R = 12;
 const PAD_T = 12;
 const PAD_B = 24;
-const WIDTH = 720;
+const WIDTH = 660;
 
 @Component({
   selector: 'app-line-chart',
@@ -20,7 +20,7 @@ const WIDTH = 720;
     >
       @for (t of ticks(); track t) {
         <line [attr.x1]="padL" [attr.x2]="width - padR" [attr.y1]="yPos(t)" [attr.y2]="yPos(t)" class="grid" />
-        <text [attr.x]="padL - 6" [attr.y]="yPos(t) + 3" text-anchor="end" class="axis">{{ t }}</text>
+        <text [attr.x]="padL - 7" [attr.y]="yPos(t) + 3" text-anchor="end" class="axis">{{ t }}</text>
       }
 
       @if (!empty()) {
@@ -28,7 +28,7 @@ const WIDTH = 720;
         <polyline [attr.points]="pts()" fill="none" class="line" />
         @for (d of data(); track d.date; let i = $index) {
           <g>
-            <circle [attr.cx]="xPos(i)" [attr.cy]="yPos(d.subjects)" r="3" class="dot" />
+            <circle [attr.cx]="xPos(i)" [attr.cy]="yPos(d.subjects)" r="2.4" class="dot" />
             <title>{{ d.date }} — {{ d.subjects }} sujet{{ d.subjects > 1 ? 's' : '' }}</title>
           </g>
         }
@@ -55,39 +55,39 @@ const WIDTH = 720;
       }
       .grid {
         stroke: var(--border);
-        stroke-width: 0.5;
-        stroke-dasharray: 2 4;
+        stroke-width: 1;
       }
       .axis {
-        fill: var(--text-dim);
-        font-size: 10px;
+        fill: var(--faint, var(--text-dim));
+        font-size: 11px;
         font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
       }
       .axis-empty {
-        fill: var(--text-dim);
+        fill: var(--faint, var(--text-dim));
         font-size: 12px;
       }
       .line {
-        stroke: var(--accent);
-        stroke-width: 1.8;
+        stroke: var(--brand, var(--accent));
+        stroke-width: 2;
         stroke-linejoin: round;
         stroke-linecap: round;
       }
       .area {
-        fill: var(--accent);
-        fill-opacity: 0.15;
+        fill: var(--brand, var(--accent));
+        fill-opacity: 0.12;
       }
       .dot {
-        fill: var(--bg-elevated);
-        stroke: var(--accent);
-        stroke-width: 1.5;
+        fill: var(--surface, var(--bg-elevated));
+        stroke: var(--brand, var(--accent));
+        stroke-width: 1.6;
       }
     `
   ]
 })
 export class LineChartComponent {
   readonly data = input<DayActivity[]>([]);
-  readonly height = input<number>(160);
+  readonly height = input<number>(180);
 
   readonly width = WIDTH;
   readonly padL = PAD_L;

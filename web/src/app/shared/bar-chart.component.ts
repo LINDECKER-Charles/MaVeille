@@ -14,11 +14,11 @@ export interface BarSeries {
   template: `
     <ul class="bars" role="list">
       @for (d of data(); track d.label) {
-        <li>
-          <div class="bar-head">
-            <span class="bar-label">{{ d.label }}</span>
-            <span class="bar-val">{{ d.value }}{{ unit() ? ' ' + unit() : '' }}</span>
-          </div>
+        <li class="bar-row" [style.--bar-accent]="d.accent || 'var(--brand, var(--accent))'">
+          <span class="bar-label">
+            <span class="dot" aria-hidden="true"></span>
+            <span class="name">{{ d.label }}</span>
+          </span>
           <div
             class="bar-track"
             role="progressbar"
@@ -27,15 +27,9 @@ export interface BarSeries {
             [attr.aria-valuemax]="max()"
             [attr.aria-label]="d.label + ' — ' + d.value + (unit() ? ' ' + unit() : '')"
           >
-            <div
-              class="bar-fill"
-              [style.width.%]="pct(d.value)"
-              [style.--bar-accent]="d.accent || 'var(--accent)'"
-            ></div>
+            <div class="bar-fill" [style.width.%]="pct(d.value)"></div>
           </div>
-          @if (d.sub) {
-            <p class="bar-sub">{{ d.sub }}</p>
-          }
+          <span class="bar-val">{{ d.value }}{{ unit() ? ' ' + unit() : '' }}</span>
         </li>
       }
     </ul>
@@ -48,44 +42,57 @@ export interface BarSeries {
         margin: 0;
         display: flex;
         flex-direction: column;
-        gap: 1rem;
+        gap: 10px;
       }
-      .bar-head {
+      .bar-row {
         display: flex;
-        justify-content: space-between;
-        align-items: baseline;
-        margin-bottom: 0.3rem;
+        align-items: center;
+        gap: 10px;
       }
       .bar-label {
+        flex: none;
+        width: 58px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-width: 0;
         color: var(--text);
+        font-size: 12.5px;
         font-weight: 500;
       }
-      .bar-val {
-        color: var(--text-dim);
-        font-variant-numeric: tabular-nums;
-        font-size: 0.9rem;
+      .dot {
+        flex: none;
+        width: 11px;
+        height: 11px;
+        border-radius: 4px;
+        background: var(--bar-accent, var(--brand, var(--accent)));
+      }
+      .name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
       .bar-track {
-        background: var(--bg-soft);
-        height: 10px;
-        border-radius: 999px;
+        flex: 1;
+        background: var(--surface-2, var(--bg-soft));
+        height: 22px;
+        border-radius: 5px;
         overflow: hidden;
-        border: 1px solid var(--border);
       }
       .bar-fill {
         height: 100%;
-        background: linear-gradient(
-          90deg,
-          var(--bar-accent, var(--accent)),
-          color-mix(in srgb, var(--bar-accent, var(--accent)) 60%, var(--success))
-        );
+        background: var(--bar-accent, var(--brand, var(--accent)));
         border-radius: inherit;
         transition: width 0.4s ease;
       }
-      .bar-sub {
-        margin: 0.25rem 0 0;
-        color: var(--text-dim);
-        font-size: 0.8rem;
+      .bar-val {
+        flex: none;
+        width: 26px;
+        text-align: right;
+        color: var(--muted, var(--text-dim));
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+        font-size: 12.5px;
       }
       @media (prefers-reduced-motion: reduce) {
         .bar-fill {

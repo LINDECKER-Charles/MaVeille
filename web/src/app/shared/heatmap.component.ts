@@ -1,16 +1,16 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import type { DayActivity } from '../data/types';
 
-const CELL = 12;
-const GAP = 3;
+const CELL = 15;
+const GAP = 4;
 const LABEL_W = 28;
-const LABEL_H = 14;
+const TOP_H = 16;
+const RADIUS = 3.5;
 
 interface Cell {
   date: string;
   subjects: number;
-  col: number;
-  row: number;
+  level: number;
   x: number;
   y: number;
   fill: string;
@@ -37,7 +37,7 @@ function startMonday(d: Date): Date {
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="heatmap-wrap">
+    <div class="hm-wrap">
       <svg
         [attr.viewBox]="'0 0 ' + width() + ' ' + height"
         role="img"
@@ -45,13 +45,13 @@ function startMonday(d: Date): Date {
         preserveAspectRatio="xMinYMin meet"
       >
         @for (ml of monthLabels(); track ml.x) {
-          <text [attr.x]="ml.x" [attr.y]="labelH - 4" class="axis">{{ ml.label }}</text>
+          <text [attr.x]="ml.x" [attr.y]="topH - 5" class="axis">{{ ml.label }}</text>
         }
         @for (rl of rowLabels; track $index) {
           @if (rl) {
             <text
-              [attr.x]="labelW - 6"
-              [attr.y]="labelH + $index * (cell + gap) + cell - 2"
+              [attr.x]="labelW - 7"
+              [attr.y]="topH + $index * (cell + gap) + cell - 3"
               text-anchor="end"
               class="axis"
             >{{ rl }}</text>
@@ -63,17 +63,15 @@ function startMonday(d: Date): Date {
             [attr.y]="c.y"
             [attr.width]="cell"
             [attr.height]="cell"
-            rx="2"
+            [attr.rx]="radius"
             [attr.fill]="c.fill"
-            stroke="var(--border)"
-            stroke-width="0.5"
           >
             <title>{{ c.tooltip }}</title>
           </rect>
         }
       </svg>
 
-      <div class="legend" aria-hidden="true">
+      <div class="hm-legend" aria-hidden="true">
         <span>Moins</span>
         <span class="sw" style="background: var(--heatmap-0)"></span>
         <span class="sw" style="background: var(--heatmap-1)"></span>
@@ -86,7 +84,7 @@ function startMonday(d: Date): Date {
   `,
   styles: [
     `
-      .heatmap-wrap {
+      .hm-wrap {
         overflow-x: auto;
       }
       svg {
@@ -94,27 +92,27 @@ function startMonday(d: Date): Date {
         min-width: 100%;
       }
       .axis {
-        fill: var(--text-dim);
+        fill: var(--faint, var(--text-dim));
         font-size: 10px;
         font-family: var(--font-mono);
       }
       rect {
         cursor: default;
       }
-      .legend {
+      .hm-legend {
         display: flex;
         align-items: center;
         gap: 4px;
-        margin-top: 0.75rem;
-        color: var(--text-dim);
-        font-size: 0.75rem;
+        margin-top: 12px;
+        color: var(--faint, var(--text-dim));
+        font-size: 11px;
+        font-family: var(--font-mono);
         justify-content: flex-end;
       }
       .sw {
-        width: 12px;
-        height: 12px;
-        border-radius: 2px;
-        border: 0.5px solid var(--border);
+        width: 13px;
+        height: 13px;
+        border-radius: 4px;
       }
     `
   ]
@@ -126,9 +124,10 @@ export class HeatmapComponent {
   readonly cell = CELL;
   readonly gap = GAP;
   readonly labelW = LABEL_W;
-  readonly labelH = LABEL_H;
-  readonly height = LABEL_H + 7 * (CELL + GAP);
-  readonly rowLabels = ['Lun', '', 'Mer', '', 'Ven', '', 'Dim'];
+  readonly topH = TOP_H;
+  readonly radius = RADIUS;
+  readonly height = TOP_H + 7 * (CELL + GAP);
+  readonly rowLabels = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 
   private readonly today = (() => {
     const t = new Date();
@@ -147,13 +146,13 @@ export class HeatmapComponent {
 
   readonly ariaLabel = computed(() => `Carte d'activité des ${this.weeks()} dernières semaines`);
 
-  private colorFor(n: number, m: number): string {
-    if (n === 0) return 'var(--heatmap-0)';
+  private levelFor(n: number, m: number): number {
+    if (n === 0) return 0;
     const intensity = n / m;
-    if (intensity < 0.25) return 'var(--heatmap-1)';
-    if (intensity < 0.5) return 'var(--heatmap-2)';
-    if (intensity < 0.75) return 'var(--heatmap-3)';
-    return 'var(--heatmap-4)';
+    if (intensity < 0.25) return 1;
+    if (intensity < 0.5) return 2;
+    if (intensity < 0.75) return 3;
+    return 4;
   }
 
   private tooltip(date: string, subjects: number): string {
@@ -180,13 +179,18 @@ export class HeatmapComponent {
       }
     }
     const max = Math.max(1, ...raw.map((c) => c.subjects));
-    return raw.map((c) => ({
-      ...c,
-      x: LABEL_W + c.col * (CELL + GAP),
-      y: LABEL_H + c.row * (CELL + GAP),
-      fill: this.colorFor(c.subjects, max),
-      tooltip: this.tooltip(c.date, c.subjects)
-    }));
+    return raw.map((c) => {
+      const level = this.levelFor(c.subjects, max);
+      return {
+        date: c.date,
+        subjects: c.subjects,
+        level,
+        x: LABEL_W + c.col * (CELL + GAP),
+        y: TOP_H + c.row * (CELL + GAP),
+        fill: `var(--heatmap-${level})`,
+        tooltip: this.tooltip(c.date, c.subjects)
+      };
+    });
   });
 
   readonly monthLabels = computed(() => {
