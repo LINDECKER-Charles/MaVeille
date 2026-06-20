@@ -95,6 +95,18 @@ jobs:
               sudo cp "$f" "$APACHE_SITES_DIR/$(basename "$f")"
             done
 
+            # Warning (non bloquant) : vhosts HTTPS dont le cert Let's Encrypt est absent.
+            # Le <IfFile> dans les templates fait que ces vhosts :443 ne sont PAS chargés
+            # tant que le cert n'existe pas — configtest reste vert, pas de rollback.
+            echo "==> Vérification des certificats SSL"
+            for f in "$STAGING"/*.conf; do
+              { grep -hoP 'SSLCertificateFile\s+\K\S+' "$f" 2>/dev/null || true; } | while read -r cert; do
+                if [ ! -s "$cert" ]; then
+                  echo "::warning::Certificat absent: $cert — vhost HTTPS de $(basename "$f") inactif jusqu'à émission (certbot)."
+                fi
+              done
+            done
+
             echo "==> apache2ctl configtest"
             if ! sudo apache2ctl configtest; then
               echo "!! configtest FAILED — rollback"

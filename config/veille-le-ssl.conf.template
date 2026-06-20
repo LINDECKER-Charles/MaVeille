@@ -1,4 +1,8 @@
 <IfModule mod_ssl.c>
+# Le vhost HTTPS n'est chargé que si le certificat Let's Encrypt existe.
+# Évite l'échec configtest (chicken-and-egg) avant la première émission du cert :
+# tant que le cert est absent, seul le vhost :80 répond (et sert l'ACME challenge).
+<IfFile "/etc/letsencrypt/live/${VEILLE_PROD_DOMAIN}/fullchain.pem">
 <VirtualHost *:443>
     Protocols h2 http/1.1
     ServerName ${VEILLE_PROD_DOMAIN}
@@ -50,4 +54,5 @@
     SSLCertificateKeyFile /etc/letsencrypt/live/${VEILLE_PROD_DOMAIN}/privkey.pem
     Include /etc/letsencrypt/options-ssl-apache.conf
 </VirtualHost>
+</IfFile>
 </IfModule>
