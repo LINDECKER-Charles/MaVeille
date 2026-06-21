@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { DigestStore } from '../../core/digest-store.service';
 import { FrDatePipe } from '../../core/date.pipe';
@@ -23,6 +23,7 @@ const MONTHS_SHORT = [
       [routerLink]="['/digest', digest().date]"
       class="card"
       [class.is-new]="isNew()"
+      [class.is-read]="isRead()"
       [style.--cat-accent]="dominantAccent()"
       [attr.aria-label]="
         'Digest du ' + (digest().date | frDate) + (isNew() ? ', nouveau' : '')
@@ -52,11 +53,25 @@ const MONTHS_SHORT = [
         <span class="title">{{ title() }}</span>
         <span class="preview">{{ preview() }}</span>
       </div>
-      <div class="meta" aria-hidden="true">
-        <span class="subjects">
+      <div class="meta">
+        <button
+          type="button"
+          class="read-toggle"
+          [class.checked]="isRead()"
+          role="checkbox"
+          [attr.aria-checked]="isRead()"
+          [attr.aria-label]="
+            (isRead() ? 'Marquer comme non lu' : 'Marquer comme lu') +
+            ' — digest du ' + (digest().date | frDate)
+          "
+          (click)="onToggle($event)"
+        >
+          <span class="check" aria-hidden="true">✓</span>
+        </button>
+        <span class="subjects" aria-hidden="true">
           {{ digest().totalSubjects }} sujet{{ digest().totalSubjects > 1 ? 's' : '' }}
         </span>
-        <span class="arrow">→</span>
+        <span class="arrow" aria-hidden="true">→</span>
       </div>
     </a>
   `,
@@ -181,9 +196,48 @@ const MONTHS_SHORT = [
         align-self: center;
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 10px;
         color: var(--faint);
         font-size: 12px;
+      }
+      .read-toggle {
+        flex: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        padding: 0;
+        border: 1.5px solid var(--border-strong);
+        border-radius: 6px;
+        background: var(--surface);
+        color: transparent;
+        cursor: pointer;
+        transition: background 0.14s ease, border-color 0.14s ease, color 0.14s ease;
+      }
+      .read-toggle .check {
+        font-size: 13px;
+        line-height: 1;
+        font-weight: 800;
+      }
+      .read-toggle:hover {
+        border-color: var(--brand);
+      }
+      .read-toggle:focus-visible {
+        outline: 2px solid var(--brand);
+        outline-offset: 2px;
+      }
+      .read-toggle.checked {
+        background: var(--brand);
+        border-color: var(--brand);
+        color: var(--bg);
+      }
+      .card.is-read {
+        opacity: 0.62;
+      }
+      .card.is-read:hover,
+      .card.is-read:focus-visible {
+        opacity: 1;
       }
       .subjects {
         font-variant-numeric: tabular-nums;
@@ -207,7 +261,16 @@ const MONTHS_SHORT = [
 export class DigestCardComponent {
   readonly digest = input.required<DigestMeta>();
   readonly isNew = input<boolean>(false);
+  readonly isRead = input<boolean>(false);
+  readonly toggleRead = output<string>();
   readonly store = inject(DigestStore);
+
+  /** Toggle read state without triggering the card's navigation. */
+  onToggle(event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.toggleRead.emit(this.digest().date);
+  }
 
   readonly dominantAccent = computed(() => {
     const cats = this.digest().categories;
