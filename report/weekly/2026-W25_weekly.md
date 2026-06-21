@@ -43,13 +43,57 @@ flowchart LR
 
 Au-delà de GLM, la semaine industrialise le **on-device souverain** : **Apertus v1.1** (EPFL/ETH, *entièrement* ouvert) sort en **INT4 ONNX** — donc embarquable dans une appli **.NET** via `Microsoft.ML.OnnxRuntime`, offline, sans serveur d'inférence ; **VibeThinker-3B** (raisonneur MIT) et la pile audio **FunAudioLLM** (ASR + VAD, Apache-2.0) passent en GGUF ; **MiniMax-M3** arrive en MLX sur Apple Silicon. MLX et GGUF deviennent les deux cibles par défaut. Côté infra agents, durcis ta gateway : **LiteLLM** cumulait une chaîne de **4 CVE** (CVSS 9.9, un compte low-priv prend le serveur) — passe en `v1.83.14`+. À surveiller aussi : Microsoft **FastContext-1.0-4B** (explorateur de dépôt qui sépare exploration et résolution) et l'API **Bedrock `InvokeGuardrailChecks`** (safeguards composables par étape d'agent).
 
+Le cas Apertus est le plus actionnable pour toi : INT4 ONNX = pas de serveur d'inférence, le modèle tourne **in-process** dans le runtime .NET, données jamais hors machine.
+
+```csharp
+// Apertus v1.1 INT4 ONNX embarqué offline dans une appli .NET (pas de gateway réseau)
+using Microsoft.ML.OnnxRuntime;
+
+var opts = new SessionOptions { GraphOptimizationLevel = GraphOptimizationLevel.ORT_ALL };
+opts.AppendExecutionProvider_CPU();          // ou DML/CUDA selon la cible
+using var session = new InferenceSession("apertus-v1.1-int4.onnx", opts);
+
+// inputIds : tokens du prompt (tokenizer chargé en amont)
+using var ids = OrtValue.CreateTensorValueFromMemory(inputIds, new long[] { 1, inputIds.Length });
+var inputs = new Dictionary<string, OrtValue> { ["input_ids"] = ids };
+using var results = session.Run(new RunOptions(), inputs, session.OutputNames);
+// logits -> argmax -> token suivant, en boucle. Zéro octet ne quitte le process.
+```
+
 ## Outillage .NET — l'agent entre dans le débogueur
 
 Aucune release cette semaine : **.NET 11 Preview 5** (9 juin) reste la dernière, la **Preview 6** est attendue mi-juillet, GA en novembre. Le mouvement est dans l'outillage. **Visual Studio 2026** (update de juin) fait passer Copilot de la complétion au **débogage** : le *Debugger Agent* valide un bug contre le runtime réel, génère un repro minimal, pose tracepoints et breakpoints conditionnels, isole la cause racine et propose un correctif — réservé au dev, jamais branché sur la prod. **VS Code 1.124** bascule l'**Autopilot par défaut**, ajoute des sessions agent en arrière-plan et un **contexte 1M** (surveille tes crédits IA). Et le **.NET Day on Agentic Modernization** (16 juin) a cadré la migration assistée du legacy (Web Forms → Blazor, onboarding **Aspire**, Copilot modernization). Action concrète du jour, hors hype : applique le **servicing de juin** s'il manque — il touche **.NET 8 LTS**.
 
+Comment ça marche : le *Debugger Agent* ne lit pas que ton code statique, il **attache un repro au runtime réel** et pose des breakpoints conditionnels là où l'état diverge. La boucle utile pour toi : tu lui donnes une exception et une stack, il isole la condition d'entrée, pas une hypothèse plausible mais fausse.
+
+```mermaid
+flowchart LR
+  Bug[Exception + stack] --> Repro[Repro minimal généré]
+  Repro --> Run[Attache au runtime réel]
+  Run --> BP[Breakpoint conditionnel sur l'état divergent]
+  BP --> Cause[Cause racine isolée]
+  Cause --> Fix[Correctif proposé - dev only]
+```
+
 ## Angular — deuxième semaine blanche post-v22
 
 Aucune release, RFC ni advisory : l'écosystème digère toujours la GA de la **v22** (Signal Forms, Selectorless, `httpResource`, zoneless par défaut, TypeScript 6 requis). Rien d'urgent à migrer — comme la semaine W24. Profite du calme pour consolider tes patterns Signal Forms, vérifier que ta CI est bien passée à **TypeScript 6**, et auditer tes derniers usages de `NgZone` avant de basculer en zoneless. Premier patch mineur **v22.1** attendu après la GA (surtout correctifs Signal Forms et migrations).
+
+Comment ça marche : en **zoneless**, Angular ne patche plus les API async via Zone.js — la détection de changement n'est plus déclenchée « magiquement » après un `setTimeout` ou un `addEventListener` hors framework. Le piège : un état muté hors d'un signal ne re-render plus. L'audit consiste à remplacer ces mutations par des signaux.
+
+```ts
+// AVANT (zone.js) — la mutation hors signal re-render quand même, par magie de Zone
+export class Ticker {
+  count = 0;
+  start() { setInterval(() => this.count++, 1000); } // OK en zonefull, figé en zoneless
+}
+
+// APRÈS (zoneless) — l'état est un signal : la vue se met à jour de façon déterministe
+export class Ticker {
+  count = signal(0);
+  start() { setInterval(() => this.count.update(c => c + 1), 1000); }
+}
+```
 
 ## À retenir si tu n'as qu'une minute
 
