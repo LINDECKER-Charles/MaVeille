@@ -222,7 +222,12 @@
         </li>
       }
       <li>
-        <app-digest-card [digest]="d" [isNew]="isNew(d.date)" />
+        <app-digest-card
+          [digest]="d"
+          [isNew]="isNew(d.date)"
+          [isRead]="isRead(d.date)"
+          (toggleRead)="toggleRead($event)"
+        />
       </li>
     }
   </ul>

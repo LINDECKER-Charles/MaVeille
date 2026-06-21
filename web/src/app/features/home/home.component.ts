@@ -16,6 +16,7 @@ import { Title, Meta, DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { DigestStore } from '../../core/digest-store.service';
 import { SearchService } from '../../core/search.service';
 import { SeenService } from '../../core/seen.service';
+import { ReadStateService } from '../../core/read-state.service';
 import { FrDatePipe } from '../../core/date.pipe';
 import { DigestCardComponent } from './digest-card.component';
 import { SearchBoxComponent } from './search-box.component';
@@ -46,6 +47,7 @@ interface KpiCard {
 export class HomeComponent implements OnInit {
   readonly store = inject(DigestStore);
   readonly seen = inject(SeenService);
+  readonly readState = inject(ReadStateService);
   private readonly searchService = inject(SearchService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -145,6 +147,14 @@ export class HomeComponent implements OnInit {
 
   isNew(date: string): boolean {
     return this.seen.isNew(date);
+  }
+
+  isRead(date: string): boolean {
+    return this.readState.isRead(date);
+  }
+
+  toggleRead(date: string): void {
+    this.readState.toggle(date);
   }
 
   // --- search handlers --------------------------------------------------------
