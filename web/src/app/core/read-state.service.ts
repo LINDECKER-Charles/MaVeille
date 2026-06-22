@@ -12,10 +12,13 @@ const STORAGE_KEY = 'veille-read-digests';
 @Injectable({ providedIn: 'root' })
 export class ReadStateService {
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
-  private readonly ids = signal<ReadonlySet<string>>(new Set());
+  private readonly _ids = signal<ReadonlySet<string>>(new Set());
+
+  /** Reactive, read-only set of digest ids marked as read. */
+  readonly ids = this._ids.asReadonly();
 
   /** Reactive count of read digests. */
-  readonly count = computed(() => this.ids().size);
+  readonly count = computed(() => this._ids().size);
 
   constructor() {
     if (this.isBrowser) this.hydrate();
@@ -23,7 +26,7 @@ export class ReadStateService {
 
   /** True if `id` has been marked as read. */
   isRead(id: string): boolean {
-    return this.ids().has(id);
+    return this._ids().has(id);
   }
 
   /** Flip the read state of `id`. */
@@ -33,19 +36,19 @@ export class ReadStateService {
 
   /** Set the read state of `id` explicitly. */
   setRead(id: string, read: boolean): void {
-    const current = this.ids();
+    const current = this._ids();
     if (current.has(id) === read) return;
     const next = new Set(current);
     if (read) next.add(id);
     else next.delete(id);
-    this.ids.set(next);
+    this._ids.set(next);
     this.persist(next);
   }
 
   /** Forget all read markers. */
   reset(): void {
-    if (this.ids().size === 0) return;
-    this.ids.set(new Set());
+    if (this._ids().size === 0) return;
+    this._ids.set(new Set());
     this.persist(new Set());
   }
 
@@ -55,7 +58,7 @@ export class ReadStateService {
       if (!raw) return;
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
-        this.ids.set(new Set(parsed.filter((x): x is string => typeof x === 'string')));
+        this._ids.set(new Set(parsed.filter((x): x is string => typeof x === 'string')));
       }
     } catch {
       /* ignore corrupt storage */
