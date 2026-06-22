@@ -1,0 +1,121 @@
+<header class="page-head">
+  <h1>Mes stats</h1>
+  <p class="sub">Suivi personnel des digests marqués comme lus.</p>
+</header>
+
+<section aria-labelledby="kpi-heading">
+  <h2 id="kpi-heading" class="visually-hidden">Indicateurs clés</h2>
+  <div class="kpi-grid">
+    <article class="kpi">
+      <span class="kpi-num">{{ readCount() }}<span class="kpi-den"> / {{ total }}</span></span>
+      <span class="kpi-label">Digests lus</span>
+      <span class="kpi-ctx">sur l'ensemble du fil</span>
+    </article>
+
+    <article class="kpi">
+      <span class="kpi-num">{{ progressPct() }}%</span>
+      <span class="kpi-label">Progression</span>
+      <span class="kpi-ctx">part du fil parcourue</span>
+    </article>
+
+    <article class="kpi">
+      <span class="kpi-num">{{ total - readCount() }}</span>
+      <span class="kpi-label">Restants</span>
+      <span class="kpi-ctx">non encore cochés</span>
+    </article>
+
+    <article class="kpi">
+      @if (latestRead(); as last) {
+        <span class="kpi-num kpi-date">{{ last.date | frDate: 'short' }}</span>
+        <span class="kpi-label">Dernier lu</span>
+        <span class="kpi-ctx">{{ last.date | frDate: 'relative' }}</span>
+      } @else {
+        <span class="kpi-num kpi-date">—</span>
+        <span class="kpi-label">Dernier lu</span>
+        <span class="kpi-ctx">aucune lecture</span>
+      }
+    </article>
+  </div>
+</section>
+
+@if (readCount() === 0) {
+  <section class="block empty-state" aria-labelledby="empty-heading">
+    <h2 id="empty-heading">Rien à afficher pour l'instant</h2>
+    <p>
+      Aucun digest n'est encore marqué comme lu. Cochez la case&nbsp;✓ sur les cartes du fil
+      pour suivre votre lecture ici.
+    </p>
+    <a class="cta" routerLink="/">Parcourir le fil →</a>
+  </section>
+} @else {
+  <section class="block" aria-labelledby="effort-heading">
+    <header class="block-head row">
+      <div>
+        <h2 id="effort-heading">Que lis-je le plus&nbsp;?</h2>
+        <p>Répartition des digests lus par catégorie.</p>
+      </div>
+      <button type="button" class="reset" (click)="reset()">Réinitialiser</button>
+    </header>
+
+    <div class="effort">
+      <div class="effort-donut">
+        <app-donut [segments]="categorySegments()" centerLabel="lus" />
+      </div>
+      <div class="effort-bars">
+        <app-bar-chart [data]="categoryBars()" unit="lus" />
+        <ul class="legend" aria-label="Légende des catégories">
+          @for (c of categoryLegend(); track c.label) {
+            <li>
+              <span class="legend-dot" [style.background]="c.accent" aria-hidden="true"></span>
+              <span>{{ c.label }}</span>
+            </li>
+          }
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" aria-labelledby="heatmap-heading">
+    <header class="block-head">
+      <h2 id="heatmap-heading">Quand ai-je lu&nbsp;?</h2>
+      <p>26 dernières semaines · sujets des digests lus</p>
+    </header>
+    <app-heatmap [activity]="readActivity()" [weeks]="26" />
+  </section>
+
+  <section class="block" aria-labelledby="list-heading">
+    <header class="block-head">
+      <h2 id="list-heading">Mes digests lus</h2>
+      <p>{{ readCount() }} digest{{ readCount() > 1 ? 's' : '' }}, du plus récent au plus ancien.</p>
+    </header>
+
+    <ul class="read-list" role="list">
+      @for (d of readDigests(); track d.date) {
+        <li class="read-item" [style.--cat-accent]="store.accentFor(d.categories[0] || '')">
+          <a class="read-link" [routerLink]="['/digest', d.date]">
+            <span class="read-date">{{ d.date | frDate }}</span>
+            <span class="read-cats">
+              @for (cat of d.categories; track cat) {
+                <span class="cat-badge" [style.--cat-accent]="store.accentFor(cat)" [style.--cat-soft]="store.softFor(cat)">
+                  <span class="mono" aria-hidden="true">{{ store.monogramFor(cat) }}</span>
+                  {{ store.labelFor(cat) }}
+                </span>
+              }
+            </span>
+            <span class="read-meta" aria-hidden="true">
+              {{ d.totalSubjects }} sujet{{ d.totalSubjects > 1 ? 's' : '' }} →
+            </span>
+          </a>
+          <button
+            type="button"
+            class="unread"
+            (click)="toggleRead(d.date)"
+            [attr.aria-label]="'Marquer comme non lu — digest du ' + (d.date | frDate)"
+          >
+            Non lu
+          </button>
+        </li>
+      }
+    </ul>
+  </section>
+}

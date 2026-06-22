@@ -27,7 +27,8 @@ export class App implements OnInit {
       ? [{ path: `/digest/${this.store.digests[0].date}`, label: 'Digest', exact: false }]
       : []),
     { path: '/rapports', label: 'Rapport hebdo', exact: false },
-    { path: '/stats', label: 'Stats', exact: false }
+    { path: '/stats', label: 'Stats', exact: false },
+    { path: '/stats-perso', label: 'Mes stats', exact: false }
   ];
 
   ngOnInit(): void {
