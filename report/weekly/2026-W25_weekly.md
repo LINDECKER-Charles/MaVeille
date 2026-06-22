@@ -6,18 +6,16 @@ categories: [Angular, CSharp, IA, Tech]
 highlights: 6
 ---
 
-# Rapport hebdo — Semaine W25 (2026-06-15 → 2026-06-21 2026)
+# Rapport hebdo — Semaine W25 (2026-06-15 → 2026-06-21)
 
-Près de 30 sujets marquants sur 4 catégories, dont 3 actives et une (Angular) en veille pour la deuxième semaine. Trois mouvements de fond traversent la semaine. D'abord une **semaine rouge côté sécurité** : avalanche de CVE critiques *activement exploitées* — Joomla JCE (CVSS 10.0), Splunk (9.8, RCE via PostgreSQL), UniFi OS (triple 10), NGINX HTTP/3, Cisco SD-WAN, Oracle PeopleSoft — plus une campagne supply-chain (1 500+ paquets AUR piégés). Ensuite, l'**IA open source bascule en local** : GLM-5.2 passe de l'annonce cloud au tout-local (FP8/GGUF/2 bpw) en six jours, au milieu d'une vague de portages on-device souverains. Enfin, côté **.NET, aucune release mais l'agent entre dans l'IDE et le débogueur**.
+Près de 30 sujets marquants sur 4 catégories, dont 3 actives et une (Angular) en veille pour la deuxième semaine consécutive. Trois mouvements de fond traversent la semaine. D'abord une **semaine rouge côté sécurité** : avalanche de CVE critiques *activement exploitées*, du lundi (PeopleSoft, AUR piégé) au dimanche (Check Point VPN, zero-day Chrome). Ensuite, l'**IA open source bascule en local** : GLM-5.2 passe de l'annonce cloud aux quants 2 bpw chargeables sur ta machine en six jours, au milieu d'une vague de portages on-device (Apertus ONNX, FunAudioLLM GGUF, lift VLM). Enfin, côté **.NET, toujours aucune release, mais l'agent entre dans le débogueur et `unsafe` devient un contrat d'appelant** en C# 16.
 
-## Sécurité — semaine rouge, exploitation active
+## Top de la semaine
 
-Le fil rouge de la semaine, c'est la vitesse entre divulgation et exploitation de masse. Trois failles sont passées au **catalogue CISA KEV** avec échéances très courtes : **Joomla JCE `CVE-2026-48907`** (CVSS **10.0**, RCE non authentifiée, exploitation *automatisée* — corrige en **2.9.99.5** et chasse les web shells, un patch ne retire pas une backdoor déjà posée), **Splunk `CVE-2026-20253`** (CVSS **9.8**, RCE pré-auth, deadline le week-end) et **Cisco SD-WAN Manager `CVE-2026-20262`** (2ᵉ faille SD-WAN en deux semaines). En parallèle, infra réseau et runtimes : **Ubiquiti UniFi OS** corrige *trois* CVSS 10 (RCE root non auth, ~100 000 instances exposées), **NGINX** patche en urgence un use-after-free HTTP/3 (`CVE-2026-42530`, CVSS 9.2 en v4 — passe en **1.31.2** ou coupe `quic`), et **Node.js** sort une salve de sécurité HIGH sur 26.x/24.x/22.x. Côté supply-chain, la campagne « Atomic Arch » a piégé **1 500+ paquets AUR** (voleur Rust + rootkit eBPF).
-
-Deux leçons te concernent directement. **Splunk** transforme une écriture de fichier non authentifiée en RCE via `lo_export` de PostgreSQL : en tant qu'utilisateur Postgres, vérifie que ton rôle applicatif n'est ni superuser ni porteur de droits *large objects*.
+**1. Sécurité — la fenêtre divulgation vers exploitation se referme.** Le fil rouge n'est pas une faille mais une vitesse : Joomla JCE (CVSS **10.0**), Splunk (**9.8**), Cisco SD-WAN sont passés au catalogue **CISA KEV** avec des deadlines de quelques jours, plusieurs déjà exploités. Le cas le plus instructif pour toi : **Splunk `CVE-2026-20253`** transforme une écriture de fichier non authentifiée en RCE via le `lo_export` de son **sidecar PostgreSQL**. La leçon est transposable à ton infra : un rôle applicatif trop privilégié = surface d'attaque.
 
 ```csharp
-// PostgreSQL : le rôle applicatif peut-il abuser de lo_export (écriture -> RCE) ?
+// PostgreSQL : ton rôle applicatif peut-il abuser de lo_export (écriture -> RCE) ?
 await using var conn = new NpgsqlConnection(connectionString);
 await conn.OpenAsync();
 await using var cmd = new NpgsqlCommand(
@@ -27,89 +25,120 @@ if (await r.ReadAsync() && (r.GetBoolean(0) || r.GetBoolean(1)))
     throw new InvalidOperationException("Role trop privilegie : lo_export exploitable.");
 ```
 
-Seconde leçon, côté PHP/Symfony : **CodeIgniter `CVE-2026-48062`** (CVSS 9.8) rappelle de ne jamais valider un upload sur l'extension dérivée du type MIME — renomme (`getRandomName()`), stocke hors webroot, coupe l'exécution de scripts. Voir aussi le M365 Copilot « SearchLeak » (`CVE-2026-42824`, corrigé côté service) : l'injection indirecte de prompt est la nouvelle XSS — traite toute sortie LLM rendue en HTML comme hostile.
-
-## IA open source — le frontier bascule en local
-
-La story de la semaine est un **time-to-local** record. **GLM-5.2** (Z.ai, MoE coding-first, contexte **1M**) est passé de l'annonce (13 juin) aux poids **MIT** sur OpenRouter, puis au **FP8 officiel**, au **GGUF** communautaire, jusqu'à des **quants ~2 bpw** chargeables sur ta machine — le tout en six jours. Z.ai le présente comme « top frontend coding model » : signal, pas preuve, à valider sur ton repo.
+**2. GLM-5.2 — un « time-to-local » record de six jours.** Le modèle de Z.ai (MoE coding-first, contexte **1M**) est passé de l'annonce aux **poids MIT** sur OpenRouter, puis au **FP8 officiel**, au **GGUF** communautaire, jusqu'à des **quants ~2 bpw** qui tiennent sur une machine de dev — en moins d'une semaine. C'est le signal de fond : un modèle « frontier coding » n'est plus une API distante, c'est un poids que tu télécharges. Z.ai le présente comme « top frontend coding model » : signal, pas preuve — à valider sur ton repo.
 
 ```mermaid
 flowchart LR
   A[13 juin - annonce 1M ctx] --> B[16 juin - poids MIT OpenRouter]
   B --> C[16 juin - FP8 officiel]
   C --> D[17 juin - GGUF llama.cpp]
-  D --> E[19 juin - quants 2bpw local]
+  D --> E[19 juin - quants 2 bpw local]
 ```
 
-Au-delà de GLM, la semaine industrialise le **on-device souverain** : **Apertus v1.1** (EPFL/ETH, *entièrement* ouvert) sort en **INT4 ONNX** — donc embarquable dans une appli **.NET** via `Microsoft.ML.OnnxRuntime`, offline, sans serveur d'inférence ; **VibeThinker-3B** (raisonneur MIT) et la pile audio **FunAudioLLM** (ASR + VAD, Apache-2.0) passent en GGUF ; **MiniMax-M3** arrive en MLX sur Apple Silicon. MLX et GGUF deviennent les deux cibles par défaut. Côté infra agents, durcis ta gateway : **LiteLLM** cumulait une chaîne de **4 CVE** (CVSS 9.9, un compte low-priv prend le serveur) — passe en `v1.83.14`+. À surveiller aussi : Microsoft **FastContext-1.0-4B** (explorateur de dépôt qui sépare exploration et résolution) et l'API **Bedrock `InvokeGuardrailChecks`** (safeguards composables par étape d'agent).
-
-Le cas Apertus est le plus actionnable pour toi : INT4 ONNX = pas de serveur d'inférence, le modèle tourne **in-process** dans le runtime .NET, données jamais hors machine.
+**3. C# 16 — `unsafe` devient un contrat propagatif.** En .NET 11 (preview opt-in), marquer un membre `unsafe` ne se contente plus d'autoriser les pointeurs : ça **déclare aux appelants** des préconditions, et chaque appel doit être entouré d'un bloc `unsafe { }`. À l'ère du code généré par IA qui recrache du `Span`/`MemoryMarshal` sans en mesurer les invariants, l'obligation de sûreté redevient **visible et grep-able en revue**.
 
 ```csharp
-// Apertus v1.1 INT4 ONNX embarqué offline dans une appli .NET (pas de gateway réseau)
-using Microsoft.ML.OnnxRuntime;
+// AVANT : unsafe interne, l'appelant ne sait rien des obligations
+public static int ReadInt(byte* p) => *(int*)p;     // risque invisible
 
-var opts = new SessionOptions { GraphOptimizationLevel = GraphOptimizationLevel.ORT_ALL };
-opts.AppendExecutionProvider_CPU();          // ou DML/CUDA selon la cible
-using var session = new InferenceSession("apertus-v1.1-int4.onnx", opts);
-
-// inputIds : tokens du prompt (tokenizer chargé en amont)
-using var ids = OrtValue.CreateTensorValueFromMemory(inputIds, new long[] { 1, inputIds.Length });
-var inputs = new Dictionary<string, OrtValue> { ["input_ids"] = ids };
-using var results = session.Run(new RunOptions(), inputs, session.OutputNames);
-// logits -> argmax -> token suivant, en boucle. Zéro octet ne quitte le process.
+// APRES (C# 16) : contrat propage + documente
+/// <safety>source >= 4 octets, aligne sur 4, valide pendant l'appel.</safety>
+public static unsafe int ReadInt(ReadOnlySpan<byte> source) =>
+    System.Runtime.InteropServices.MemoryMarshal.Read<int>(source);
+unsafe { int v = ReadInt(buffer); }                 // decision tracee dans la diff
 ```
 
-## Outillage .NET — l'agent entre dans le débogueur
+## Sécurité — semaine rouge, exploitation active
 
-Aucune release cette semaine : **.NET 11 Preview 5** (9 juin) reste la dernière, la **Preview 6** est attendue mi-juillet, GA en novembre. Le mouvement est dans l'outillage. **Visual Studio 2026** (update de juin) fait passer Copilot de la complétion au **débogage** : le *Debugger Agent* valide un bug contre le runtime réel, génère un repro minimal, pose tracepoints et breakpoints conditionnels, isole la cause racine et propose un correctif — réservé au dev, jamais branché sur la prod. **VS Code 1.124** bascule l'**Autopilot par défaut**, ajoute des sessions agent en arrière-plan et un **contexte 1M** (surveille tes crédits IA). Et le **.NET Day on Agentic Modernization** (16 juin) a cadré la migration assistée du legacy (Web Forms → Blazor, onboarding **Aspire**, Copilot modernization). Action concrète du jour, hors hype : applique le **servicing de juin** s'il manque — il touche **.NET 8 LTS**.
+Sept jours, une dizaine de failles critiques, plusieurs **activement exploitées**. La semaine ouvre sur le zero-day **Oracle PeopleSoft `CVE-2026-35273`** (RCE, vol de données par ShinyHunters) et la campagne supply-chain **« Atomic Arch »** (1 500+ paquets **AUR** piégés : voleur Rust + rootkit eBPF). Elle enchaîne sur **CodeIgniter `CVE-2026-48062`** (CVSS 9.8, RCE par bypass du contrôle d'upload — ne valide jamais un upload sur l'extension dérivée du MIME), **Wazuh 5.0** (CVSS 10, injection dans le pipeline d'inventaire), le M365 Copilot **« SearchLeak » `CVE-2026-42824`** (exfiltration en un clic par injection indirecte de prompt — l'injection de prompt est la nouvelle XSS), **Ubiquiti UniFi OS** (*triple* CVSS 10, RCE root non auth, ~100 000 instances exposées), **Joomla JCE `CVE-2026-48907`** (CVSS 10.0, CISA KEV, exploitation automatisée vers 2.9.99.5 + chasse aux web shells), une salve **Node.js** HIGH (26.x/24.x/22.x), **NGINX HTTP/3 `CVE-2026-42530`** (use-after-free, vers 1.31.2 ou coupe `quic`) et **Splunk `CVE-2026-20253`** (RCE pré-auth). Le week-end ajoute deux urgences : un **zero-day Chrome/V8 `CVE-2026-11645`** (5ᵉ de l'année, vers 149.0.7827.102+) et le **bypass d'authentification Check Point VPN**.
 
-Comment ça marche : le *Debugger Agent* ne lit pas que ton code statique, il **attache un repro au runtime réel** et pose des breakpoints conditionnels là où l'état diverge. La boucle utile pour toi : tu lui donnes une exception et une stack, il isole la condition d'entrée, pas une hypothèse plausible mais fausse.
+Le cas Check Point **`CVE-2026-50751`** (CVSS 9.3, exploité par un affilié **Qilin**, PoC publique) est un cas d'école de **validation de confiance incomplète** : la passerelle accepte un certificat auto-signé dès que son *subject DN* cite un utilisateur connu — elle vérifie l'identité affichée, **jamais la preuve cryptographique**.
 
 ```mermaid
-flowchart LR
-  Bug[Exception + stack] --> Repro[Repro minimal généré]
-  Repro --> Run[Attache au runtime réel]
-  Run --> BP[Breakpoint conditionnel sur l'état divergent]
-  BP --> Cause[Cause racine isolée]
-  Cause --> Fix[Correctif proposé - dev only]
+sequenceDiagram
+  participant A as Attaquant
+  participant G as Passerelle Check Point
+  A->>G: IKEv1 + Vendor ID VPNExtFeatures forge
+  A->>G: Certificat auto-signe (subject DN = user connu)
+  Note over G: Drapeaux d'auth manipules, signature non verifiee
+  G-->>A: Session VPN etablie (sans mot de passe)
 ```
+
+La parade dépasse le hotfix : **IKEv2 uniquement**, certificat machine **obligatoire** (signé par ta CA, pas un DN qui « résout »), et l'audit de tout protocole déprécié laissé actif « au cas où » (IKEv1, TLS 1.0, SMBv1). Référence : [blog Check Point](https://blog.checkpoint.com/security/check-point-releases-important-hotfix-for-vulnerabilities-in-deprecated-ikev1-vpn-protocol/).
+
+## IA open source — le frontier bascule en local
+
+Au-delà du sprint GLM-5.2 (voir Top), la semaine **industrialise le on-device souverain**. **Apertus v1.1** (EPFL/ETH, *entièrement* ouvert) sort en **INT4 ONNX** — donc embarquable in-process dans une appli **.NET** via `Microsoft.ML.OnnxRuntime`, offline, sans serveur d'inférence. La pile audio **FunAudioLLM** (ASR + VAD, Apache-2.0) et **MiniMax-M3** (MLX, Apple Silicon) passent en local ; **GGUF** et **MLX** s'imposent comme les deux cibles par défaut. Côté souveraineté, **Rio-3.5-Open-397B** (base Qwen3.5) confirme la tendance. Côté agents : **FastContext-1.0-4B** (Microsoft, sous-agent d'exploration de dépôt), le papier **« Models Take Notes at Prefill »** (cache KV éditable et composable) et l'API **Bedrock `InvokeGuardrailChecks`** (safeguards par étape). Et durcis ta gateway : **LiteLLM** cumulait **4 CVE** (CVSS 9.9) vers `v1.83.14`+.
+
+Le sujet le plus actionnable du week-end : **`datalab-to/lift`**, un VLM ouvert (~9,6 Md, base `qwen3_5`) qui lit une page PDF **rendue en image** et produit du **JSON structuré** — de quoi remplacer un pipeline OCR + regex fragile par un service auto-hébergé, sans API tierce ni fuite de documents sensibles.
+
+```python
+# datalab-to/lift : facture PDF (rendue en image) -> JSON, schema impose dans le prompt
+from transformers import AutoProcessor, AutoModelForVision2Seq
+from PIL import Image
+import json
+
+proc = AutoProcessor.from_pretrained("datalab-to/lift", trust_remote_code=True)
+model = AutoModelForVision2Seq.from_pretrained(
+    "datalab-to/lift", device_map="auto", trust_remote_code=True)
+
+page = Image.open("facture_001.png")            # PDF rendu en image au prealable
+prompt = "Extract fields as strict JSON: invoice_no, total_ttc, due_date"
+inputs = proc(images=page, text=prompt, return_tensors="pt").to(model.device)
+out = model.generate(**inputs, max_new_tokens=512)
+data = json.loads(proc.decode(out[0], skip_special_tokens=True))  # A VALIDER avant insert
+```
+
+Règle d'or quel que soit le modèle : **tu ne fais jamais confiance au JSON brut** — valide-le (pydantic, ou JSON Schema côté .NET) et prévois une file de revue humaine. Un VLM peut halluciner un champ absent.
+
+## .NET — l'agent entre dans le débogueur
+
+Aucune release : **.NET 11 Preview 5** (9 juin) reste la dernière, **Preview 6** attendue mi-juillet, GA en novembre. Le mouvement est dans l'outillage. **VS Code 1.124** bascule l'**Autopilot par défaut**, ajoute des sessions agent en arrière-plan et un **contexte 1M** (surveille tes crédits IA). **Visual Studio 2026** (update de juin) fait passer Copilot de la complétion au **débogage** via un *Debugger Agent* qui valide un bug contre le runtime réel, pose tracepoints et breakpoints conditionnels, isole la cause racine et propose un correctif — réservé au dev, jamais branché sur la prod. Le **.NET Day on Agentic Modernization** (16 juin) a cadré la migration assistée du legacy (Web Forms vers Blazor, onboarding **Aspire**). Action concrète hors hype : applique le **servicing de juin** s'il manque — il touche **.NET 8 LTS**.
+
+Le *Debugger Agent* est la pièce marquante : il ne raisonne pas sur du code mort, il **attache un repro au runtime réel** et instrumente l'exécution là où l'état diverge. Tu lui donnes une exception + une stack, il isole la condition d'entrée — pas une hypothèse plausible mais fausse.
+
+```mermaid
+flowchart TD
+  BUG[Rapport de bug] --> REPRO[Repro minimal genere]
+  REPRO --> INSTR[Tracepoints + breakpoints conditionnels]
+  INSTR --> RUN[Session de debug - runtime reel]
+  RUN --> ROOT[Cause racine isolee]
+  ROOT --> FIX[Correctif propose - dev only]
+  RUN -. observe / reajuste .-> INSTR
+```
+
+Détail : [VS 2026 — Debugging with Copilot](https://devblogs.microsoft.com/visualstudio/visual-studio-2026-debugging-with-copilot/).
 
 ## Angular — deuxième semaine blanche post-v22
 
-Aucune release, RFC ni advisory : l'écosystème digère toujours la GA de la **v22** (Signal Forms, Selectorless, `httpResource`, zoneless par défaut, TypeScript 6 requis). Rien d'urgent à migrer — comme la semaine W24. Profite du calme pour consolider tes patterns Signal Forms, vérifier que ta CI est bien passée à **TypeScript 6**, et auditer tes derniers usages de `NgZone` avant de basculer en zoneless. Premier patch mineur **v22.1** attendu après la GA (surtout correctifs Signal Forms et migrations).
+Aucune release, RFC ni advisory sur les 7 jours : l'écosystème digère toujours la GA de la **v22** (Signal Forms, Selectorless, `httpResource`, zoneless par défaut, TypeScript 6 requis). Rien d'urgent à migrer. Profite du calme pour trois chantiers : consolider tes patterns **Signal Forms**, vérifier que ta CI est bien passée à **TypeScript 6**, et auditer tes derniers `NgZone` avant de basculer en zoneless. À surveiller : le premier patch mineur **v22.1** (correctifs Signal Forms / migrations) et les error boundaries **`@boundary`**, toujours en *developer preview* annoncées pour le Q3 2026.
 
-Comment ça marche : en **zoneless**, Angular ne patche plus les API async via Zone.js — la détection de changement n'est plus déclenchée « magiquement » après un `setTimeout` ou un `addEventListener` hors framework. Le piège : un état muté hors d'un signal ne re-render plus. L'audit consiste à remplacer ces mutations par des signaux.
+Le piège du zoneless mérite un rappel : sans Zone.js, Angular ne déclenche plus « magiquement » la détection de changement après une API async. Un état muté hors d'un signal ne rafraîchira pas la vue — d'où l'intérêt de tout porter sur les signals **avant** de couper Zone.
 
-```ts
-// AVANT (zone.js) — la mutation hors signal re-render quand même, par magie de Zone
-export class Ticker {
-  count = 0;
-  start() { setInterval(() => this.count++, 1000); } // OK en zonefull, figé en zoneless
-}
+```typescript
+// Zoneless : un champ "nu" ne re-rend plus apres un setTimeout
+count = 0;                       // mute hors signal -> la vue ne bouge pas
+tick() { setTimeout(() => this.count++, 1000); }
 
-// APRÈS (zoneless) — l'état est un signal : la vue se met à jour de façon déterministe
-export class Ticker {
-  count = signal(0);
-  start() { setInterval(() => this.count.update(c => c + 1), 1000); }
-}
+// Correctif : passe l'etat en signal, la CD se declenche a la mutation
+count = signal(0);               // dependance suivie par Angular
+tick() { setTimeout(() => this.count.update(c => c + 1), 1000); }
 ```
 
 ## À retenir si tu n'as qu'une minute
 
-- **Patche en urgence** ce que tu opères : **Joomla JCE 2.9.99.5** (CVSS 10, exploité), **Splunk 10.2.4/10.0.7** (RCE pré-auth), **NGINX 1.31.2** (HTTP/3), **UniFi OS** (triple 10), salve **Node.js** 24.x LTS.
-- **PostgreSQL** : vérifie que ton rôle applicatif n'est pas superuser / *large objects* — `lo_export` change une écriture de fichier en RCE (leçon Splunk).
-- **GLM-5.2** est exécutable en local (GGUF/FP8, licence MIT) : essai comparatif sur ton repo possible pour le coût d'un téléchargement.
-- **Apertus v1.1 INT4 ONNX** embarque un LLM ouvert dans une appli **.NET** (`Microsoft.ML.OnnxRuntime`), offline.
-- **.NET** : rien à installer, **Preview 6** mi-juillet ; applique le **servicing de juin** sur **.NET 8 LTS**.
-- **Angular** : deuxième semaine sans action requise — stabilise Signal Forms et finis ta migration TypeScript 6.
+- **Patche en priorité** : Joomla JCE (10.0), Splunk (9.8), Chrome/V8 vers 149.0.7827.102+, NGINX vers 1.31.2, Check Point en IKEv2-only. Plusieurs sont au **CISA KEV**, déjà exploités.
+- **Audit Postgres** : aucun rôle applicatif `superuser` / `large objects` — c'est le vecteur de la RCE Splunk, transposable à ton infra.
+- **GLM-5.2** tourne en local en **quants 2 bpw** ; **Apertus INT4 ONNX** s'embarque dans une appli .NET offline ; **lift** remplace ton OCR+regex par du PDF vers JSON.
+- **.NET** : pas de release, mais teste le **Debugger Agent** (VS 2026) sur un vrai bug, et regarde la preview **C# 16 `unsafe`** sur une branche.
+- **Angular** : rien d'urgent ; bumpe TypeScript 6 et porte ton état sur les signals avant le zoneless.
 
 ## Index de la semaine
 
-- **Tech** : semaine rouge — CVE critiques exploitées (Joomla, Splunk, UniFi, NGINX, Cisco, PeopleSoft), supply-chain AUR, plus Apple Container 1.0 et Linux 7.1 — ~13 sujets sur la semaine
-- **IA** : le frontier bascule en local (GLM-5.2 cloud→GGUF), portages souverains on-device et durcissement des gateways — ~13 sujets sur la semaine
-- **CSharp** : pas de release, l'agent entre dans l'IDE/débogueur (VS 2026, VS Code 1.124, .NET Day) — ~4 sujets sur la semaine
-- **Angular** : deuxième semaine blanche, consolidation post-GA v22 — synthèse seule
+- **Tech** : semaine rouge, ~14 CVE critiques dont plusieurs exploitées (PeopleSoft à Check Point, Chrome) — **~14 sujets** sur la semaine
+- **IA** : bascule locale du frontier (GLM-5.2, Apertus ONNX, FunAudioLLM, lift) + durcissement agents — **~12 sujets** sur la semaine
+- **CSharp** : zéro release, l'agent dans le débogueur + `unsafe` contrat d'appelant en C# 16 — **4 sujets** sur la semaine
+- **Angular** : deuxième semaine blanche, l'écosystème digère la v22 — **0 sujet neuf** sur la semaine
 
 ---
-*Généré le 2026-06-20 par la routine `weekly` (Claude Cowork). Couvre 2026-06-15 → 2026-06-21 (semaine ISO W25), sur la base des digests disponibles jusqu'au 20 juin. Rapport produit le samedi 20 — en amont du créneau lundi habituel ; le dimanche 21 restait ouvert au moment de la génération.*
+*Généré le 2026-06-22 par la routine `weekly` (Claude Cowork). Couvre 2026-06-15 → 2026-06-21.*
