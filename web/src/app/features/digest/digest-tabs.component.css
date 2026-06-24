@@ -259,6 +259,13 @@
   .layout {
     flex-direction: column;
   }
+  /* En colonne, `align-items: flex-start` dimensionnerait `.col` sur son
+     contenu (blocs de code larges) → débordement. On la contraint à la largeur
+     du conteneur pour que les `pre` (overflow-x: auto) scrollent au lieu de
+     pousser la page. */
+  .col {
+    align-self: stretch;
+  }
   .toc {
     width: 100%;
     position: static;

@@ -9,6 +9,7 @@ export interface RouteSpec {
 const ALL_ROUTES: RouteSpec[] = [
   { path: '/', heading: /Digests quotidiens/i },
   { path: '/stats', heading: /Statistiques/i },
+  { path: '/stats-perso', heading: /Mes stats/i },
   { path: '/rapports', heading: /Rapports hebdomadaires/i },
   { path: '/rapports/2026-W24', heading: /W24/i },
   { path: '/digest/2026-06-20', heading: /./ }

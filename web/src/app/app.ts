@@ -1,5 +1,14 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
-import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  HostListener,
+  OnInit,
+  inject,
+  signal
+} from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { filter } from 'rxjs';
 import { ThemeService } from './core/theme.service';
 import { PrefsService } from './core/prefs.service';
 import { DigestStore } from './core/digest-store.service';
@@ -8,7 +17,7 @@ import { DigestStore } from './core/digest-store.service';
   selector: 'app-root',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, NgTemplateOutlet],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
@@ -19,6 +28,9 @@ export class App implements OnInit {
   readonly prefs = inject(PrefsService);
 
   readonly theme = this.themeService.theme;
+
+  /** Ouverture du menu mobile (hamburger) — pertinent sous 900px (cf. app.css). */
+  readonly menuOpen = signal(false);
 
   readonly navLinks = [
     { path: '/', label: "Aujourd'hui", exact: true },
@@ -34,6 +46,23 @@ export class App implements OnInit {
   ngOnInit(): void {
     this.themeService.init();
     this.prefs.init();
+    // Referme le menu mobile après toute navigation (clic sur un lien interne).
+    this.router.events
+      .pipe(filter((e) => e instanceof NavigationEnd))
+      .subscribe(() => this.menuOpen.set(false));
+  }
+
+  toggleMenu(): void {
+    this.menuOpen.update((v) => !v);
+  }
+
+  closeMenu(): void {
+    this.menuOpen.set(false);
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    this.menuOpen.set(false);
   }
 
   toggleTheme(): void {

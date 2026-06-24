@@ -299,6 +299,10 @@ hr {
    --------------------------------------------------------------------------- */
 .markdown {
   color: var(--text);
+  /* Les tokens longs (code inline, URLs, identifiants) doivent revenir à la
+     ligne plutôt que forcer une largeur supérieure au conteneur (débordement
+     horizontal sur mobile). */
+  overflow-wrap: break-word;
 }
 
 .markdown h1,
@@ -446,6 +450,10 @@ hr {
   margin: 1.2em 0;
   width: 100%;
   font-size: 0.92rem;
+  /* Tableaux larges : on les rend scrollables horizontalement au lieu de
+     déborder de la page (pas de wrapper DOM disponible côté markdown). */
+  display: block;
+  overflow-x: auto;
 }
 .markdown th,
 .markdown td {
