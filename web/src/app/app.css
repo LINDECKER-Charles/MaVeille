@@ -182,6 +182,31 @@ header {
   border-color: var(--border-strong);
 }
 
+/* Hamburger (mobile uniquement, cf. media query) */
+.nav-toggle {
+  display: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  cursor: pointer;
+  font-size: 1.05rem;
+  line-height: 1;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+.nav-toggle:hover {
+  border-color: var(--border-strong);
+}
+
+/* Tiroir mobile : masqué par défaut (desktop), révélé par la media query. */
+.mobile-menu {
+  display: none;
+}
+
 main {
   flex: 1;
 }
@@ -198,29 +223,80 @@ footer {
   text-align: center;
 }
 
-/* ---- Responsive ---- */
-@media (max-width: 720px) {
+/* ---- Responsive ----
+   Sous 900px, le bandeau ne peut plus contenir la nav inline + les contrôles
+   (largeur intrinsèque ~890px) : on bascule sur un menu hamburger. Le bandeau
+   ne garde alors que hamburger + marque + recherche (icône) + thème. */
+@media (max-width: 899.98px) {
   .header-inner {
     gap: 12px;
   }
-  .search-label {
+  .nav-toggle {
+    display: inline-flex;
+  }
+  /* Nav inline et densité inline déplacées dans le tiroir mobile. */
+  .header-inner .primary-nav,
+  .header-inner > .segmented {
     display: none;
   }
-  .nav-link {
-    padding: 7px 9px;
-  }
-}
-@media (max-width: 560px) {
+  /* Recherche en icône seule pour économiser la largeur. */
+  .search-label,
   .search-btn kbd {
     display: none;
   }
-  .segmented {
-    display: none;
+  .search-btn {
+    padding: 7px 9px;
+  }
+
+  /* Tiroir mobile : accordéon sous le bandeau (header sticky). */
+  .mobile-menu {
+    display: block;
+    overflow: hidden;
+    max-height: 0;
+    background: var(--bg);
+    border-top: 1px solid transparent;
+    transition: max-height 0.25s ease, border-color 0.25s ease;
+  }
+  .menu-open .mobile-menu {
+    max-height: 480px;
+    border-top-color: var(--border);
+  }
+  .mobile-menu .nav-link {
+    display: block;
+    padding: 12px 24px;
+    min-height: 44px;
+    border-radius: 0;
+    font-size: 15px;
+  }
+  .mobile-menu .nav-link:hover,
+  .mobile-menu .nav-link.active {
+    background: var(--surface-2);
+  }
+  .mobile-density {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 24px 18px;
+    border-top: 1px solid var(--border);
+    margin-top: 6px;
+  }
+  .mobile-density-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--faint);
+  }
+  .mobile-menu .segmented {
+    display: inline-flex;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .skip-link {
+    transition: none;
+  }
+  .mobile-menu {
     transition: none;
   }
 }

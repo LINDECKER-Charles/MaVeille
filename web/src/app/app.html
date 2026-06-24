@@ -1,26 +1,43 @@
 <a href="#main" class="skip-link">Aller au contenu principal</a>
 
+<!-- Liens de navigation — partagés entre la nav desktop et le tiroir mobile. -->
+<ng-template #navTpl>
+  @for (link of navLinks; track link.path) {
+    <a
+      [routerLink]="link.path"
+      class="nav-link"
+      routerLinkActive="active"
+      [routerLinkActiveOptions]="{ exact: link.exact }"
+      #rla="routerLinkActive"
+      [attr.aria-current]="rla.isActive ? 'page' : null"
+      (click)="closeMenu()"
+    >
+      {{ link.label }}
+    </a>
+  }
+</ng-template>
+
 <div class="shell">
-  <header>
+  <header [class.menu-open]="menuOpen()">
     <div class="header-inner">
+      <button
+        class="nav-toggle"
+        type="button"
+        (click)="toggleMenu()"
+        [attr.aria-expanded]="menuOpen()"
+        aria-controls="mobile-menu"
+        [attr.aria-label]="menuOpen() ? 'Fermer le menu' : 'Ouvrir le menu'"
+      >
+        <span aria-hidden="true">{{ menuOpen() ? '✕' : '☰' }}</span>
+      </button>
+
       <a routerLink="/" class="brand" aria-label="Veille — accueil">
         <span class="logo" aria-hidden="true">V</span>
         <span class="wordmark">Veille</span>
       </a>
 
       <nav class="primary-nav" aria-label="Navigation principale">
-        @for (link of navLinks; track link.path) {
-          <a
-            [routerLink]="link.path"
-            class="nav-link"
-            routerLinkActive="active"
-            [routerLinkActiveOptions]="{ exact: link.exact }"
-            #rla="routerLinkActive"
-            [attr.aria-current]="rla.isActive ? 'page' : null"
-          >
-            {{ link.label }}
-          </a>
-        }
+        <ng-container [ngTemplateOutlet]="navTpl" />
       </nav>
 
       <span class="spacer"></span>
@@ -62,6 +79,34 @@
         <span aria-hidden="true">{{ theme() === 'dark' ? '☀' : '☾' }}</span>
       </button>
     </div>
+
+    <!-- Tiroir mobile : affiché sous 900px quand menuOpen() (cf. app.css). -->
+    <nav id="mobile-menu" class="mobile-menu" aria-label="Navigation mobile">
+      <ng-container [ngTemplateOutlet]="navTpl" />
+      <div class="mobile-density" role="radiogroup" aria-label="Densité d'affichage">
+        <span class="mobile-density-label">Densité</span>
+        <div class="segmented">
+          <button
+            type="button"
+            role="radio"
+            [attr.aria-checked]="prefs.density() === 'comfort'"
+            [class.active]="prefs.density() === 'comfort'"
+            (click)="setDensity('comfort')"
+          >
+            Confort
+          </button>
+          <button
+            type="button"
+            role="radio"
+            [attr.aria-checked]="prefs.density() === 'compact'"
+            [class.active]="prefs.density() === 'compact'"
+            (click)="setDensity('compact')"
+          >
+            Compact
+          </button>
+        </div>
+      </div>
+    </nav>
   </header>
 
   <main id="main" tabindex="-1">
