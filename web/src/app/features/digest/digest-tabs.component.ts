@@ -7,6 +7,7 @@ import {
   effect,
   inject,
   input,
+  isDevMode,
   signal,
   viewChildren
 } from '@angular/core';
@@ -14,6 +15,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { DigestStore } from '../../core/digest-store.service';
 import { PrefsService, type Depth } from '../../core/prefs.service';
 import { MarkdownComponent } from '../../shared/markdown.component';
+import { SpeakerPlayerComponent } from '../../shared/speaker-player.component';
 import { DetailSnippetComponent } from './detail-snippet.component';
 import type { DetailSnippet, RenderedCategory, RenderedDigest } from '../../data/types';
 
@@ -23,7 +25,7 @@ type Tab = string; // <category>
   selector: 'app-digest-tabs',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MarkdownComponent, DetailSnippetComponent],
+  imports: [MarkdownComponent, DetailSnippetComponent, SpeakerPlayerComponent],
   templateUrl: './digest-tabs.component.html',
   styleUrl: './digest-tabs.component.css'
 })
@@ -45,6 +47,24 @@ export class DigestTabsComponent {
   readonly activeCat = computed<RenderedCategory | undefined>(() =>
     this.digest().categories.find((c) => c.category === this.activeTab())
   );
+
+  // ---- lecteur vocal (dev only) — cf. SpeakerPlayerComponent ---------------
+
+  /** Vrai en `ng serve` / dev, faux en build prod → aucune empreinte en production. */
+  readonly isDev = isDevMode();
+
+  /** Id speaker de la vue courante : `categorie/<Cat>/<date>_<synthese|detail>`. */
+  readonly speakerId = computed(
+    () =>
+      `categorie/${this.activeTab()}/${this.digest().date}_${this.showDetail() ? 'detail' : 'synthese'}`
+  );
+
+  /** Le fichier existe-t-il ? (le détail peut être absent pour une catégorie donnée) */
+  readonly speakerAvailable = computed(() => {
+    const cat = this.activeCat();
+    if (!cat) return false;
+    return this.showDetail() ? this.hasDetail(cat) : !!cat.syntheseHtml;
+  });
 
   /** Per-tab per-snippet open state. */
   readonly snippetOpen = signal<Record<string, Record<string, boolean>>>({});

@@ -1,0 +1,36 @@
+# Stack GPU pour cartes Blackwell (RTX 50xx / sm_120) : Kokoro-FastAPI rebuild avec
+# torch cu128 (cf. Dockerfile.kokoro-gpu). Lancée par speaker-gpu.cmd.
+#
+#   docker compose -f docker-compose.gpu.yml up --build
+
+services:
+  kokoro:
+    build:
+      context: .
+      dockerfile: Dockerfile.kokoro-gpu
+    image: veille-kokoro-cu128:latest
+    ports:
+      - "8880:8880"
+    restart: "no"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: ["gpu"]
+
+  speaker:
+    build: .
+    ports:
+      - "8830:8830"
+    depends_on:
+      - kokoro
+    environment:
+      SPEAKER_ENGINE: kokoro
+      KOKORO_BASE_URL: http://kokoro:8880/v1
+      SPEAKER_REPORTS_DIR: /reports
+      SPEAKER_PORT: "8830"
+    volumes:
+      - ../report:/reports:ro
+      - ./cache:/app/cache
+      - ./config:/app/config
+    restart: unless-stopped

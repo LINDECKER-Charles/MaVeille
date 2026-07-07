@@ -1,8 +1,17 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnInit,
+  computed,
+  inject,
+  isDevMode,
+  signal
+} from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Title } from '@angular/platform-browser';
 import { DigestStore } from '../../core/digest-store.service';
 import { MarkdownComponent } from '../../shared/markdown.component';
+import { SpeakerPlayerComponent } from '../../shared/speaker-player.component';
 import { DonutComponent, type DonutSegment } from '../../shared/donut.component';
 import { formatFrRange, resolveCurrentWeekId } from './rapports-list.component';
 import type { WeeklyReport } from '../../data/types';
@@ -18,7 +27,7 @@ interface DistRow {
   selector: 'app-rapport-detail',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, MarkdownComponent, DonutComponent],
+  imports: [RouterLink, MarkdownComponent, DonutComponent, SpeakerPlayerComponent],
   template: `
     <article class="doc">
       <nav class="breadcrumb" aria-label="Fil d'Ariane">
@@ -37,6 +46,11 @@ interface DistRow {
         </p>
 
         <h1>{{ r.title }}</h1>
+
+        <!-- Lecture vocale — dev uniquement : @if(isDev) → zéro empreinte en prod. -->
+        @if (isDev) {
+          <app-speaker-player [veilleId]="'weekly/' + r.id + '_weekly'" />
+        }
 
         @if (distribution(); as dist) {
           <section class="effort" aria-labelledby="effort-h">
@@ -222,6 +236,9 @@ export class RapportDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly store = inject(DigestStore);
   private readonly title = inject(Title);
+
+  /** Vrai en `ng serve` / dev, faux en build prod → aucune empreinte en production. */
+  readonly isDev = isDevMode();
 
   readonly report = signal<WeeklyReport | null>(null);
   readonly notFound = signal(false);

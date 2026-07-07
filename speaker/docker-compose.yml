@@ -1,0 +1,33 @@
+services:
+  # Moteur TTS principal : Kokoro-82M via serveur OpenAI-compatible, GPU NVIDIA.
+  kokoro:
+    image: ghcr.io/remsky/kokoro-fastapi-gpu:latest
+    ports:
+      - "8880:8880"
+    # Pas de restart auto : un GPU non supporté (ex. Blackwell/sm_120 non couvert par
+    # le PyTorch de l'image) échoue de façon déterministe → on évite le crash-loop.
+    # Basculer sur speaker.cmd (CPU) si le chargement CUDA échoue.
+    restart: "no"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: ["gpu"]
+
+  # Backend « speaker » : scan report/, normalisation, cache, streaming, UI.
+  speaker:
+    build: .
+    ports:
+      - "8830:8830"
+    depends_on:
+      - kokoro
+    environment:
+      SPEAKER_ENGINE: kokoro
+      KOKORO_BASE_URL: http://kokoro:8880/v1
+      SPEAKER_REPORTS_DIR: /reports
+      SPEAKER_PORT: "8830"
+    volumes:
+      - ../report:/reports:ro      # contenu source (lecture seule)
+      - ./cache:/app/cache         # audio généré (persisté hôte)
+      - ./config:/app/config       # config + lexique éditables à chaud
+    restart: unless-stopped

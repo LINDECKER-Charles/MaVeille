@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>🎧 Veille Speaker</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">🎧 <span>Veille Speaker</span></div>
+    <div class="engine" id="engine-badge" aria-live="polite">moteur : …</div>
+  </header>
+
+  <main class="layout">
+    <aside class="sidebar">
+      <div class="field">
+        <label for="search">Recherche</label>
+        <input type="search" id="search" placeholder="Filtrer par titre…" autocomplete="off" />
+      </div>
+
+      <fieldset class="filters" id="filter-category">
+        <legend>Catégorie</legend>
+        <div class="chips" id="category-chips"></div>
+      </fieldset>
+
+      <fieldset class="filters" id="filter-type">
+        <legend>Type</legend>
+        <div class="chips">
+          <label><input type="checkbox" value="synthese" class="type-filter" /> Synthèse</label>
+          <label><input type="checkbox" value="detail" class="type-filter" /> Détail</label>
+          <label><input type="checkbox" value="weekly" class="type-filter" /> Hebdo</label>
+        </div>
+      </fieldset>
+
+      <div class="list-meta" id="list-meta"></div>
+      <div class="veille-list" id="veille-list" role="list"></div>
+    </aside>
+
+    <section class="content">
+      <div class="player-card" id="player-card" hidden>
+        <div class="now-playing">
+          <h1 id="np-title">—</h1>
+          <div class="np-sub" id="np-sub"></div>
+        </div>
+
+        <audio id="player" preload="none"></audio>
+
+        <div class="transport">
+          <button id="skip-back" class="btn" title="Reculer 15 s">⏮ 15</button>
+          <button id="play" class="btn btn-primary" title="Lecture / pause">▶</button>
+          <button id="skip-fwd" class="btn" title="Avancer 15 s">15 ⏭</button>
+
+          <div class="time" id="time">0:00 / 0:00</div>
+
+          <div class="ctrl">
+            <label for="voice">Voix</label>
+            <select id="voice"></select>
+          </div>
+
+          <div class="ctrl">
+            <label for="speed">Vitesse <span id="speed-val">1.0×</span></label>
+            <input type="range" id="speed" min="0.75" max="2" step="0.05" value="1" />
+          </div>
+
+          <button id="download" class="btn" title="Télécharger le MP3">⬇ MP3</button>
+        </div>
+
+        <div class="progress" id="progress"><div class="progress-bar" id="progress-bar"></div></div>
+        <div class="status" id="status" aria-live="polite"></div>
+      </div>
+
+      <div class="empty" id="empty">
+        <p>Sélectionne une veille à gauche pour l'écouter.</p>
+      </div>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>
