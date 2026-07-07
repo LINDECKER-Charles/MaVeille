@@ -60,6 +60,14 @@ devops-omnicard
 config/*.conf
 config/staging/
 
+# Veille Speaker (speaker/) — audio généré, modèles, venv (jamais versionnés)
+speaker/cache/audio/
+speaker/cache/index.json
+speaker/models/
+speaker/.venv/
+speaker/**/__pycache__/
+speaker/.pytest_cache/
+
 # App Angular (web/) — artefacts de build & données générées
 web/node_modules/
 web/dist/
@@ -79,3 +87,4 @@ CLAUDE.md
 design
 
 docs/DEPLOYMENT_SECRETS.md
+speaker/vendor/

@@ -1,0 +1,38 @@
+# syntax=docker/dockerfile:1.4
+# Image Kokoro-FastAPI GPU custom pour GPU Blackwell (RTX 50xx, compute sm_120).
+#
+# L'image officielle embarque torch 2.8.0+cu126, dont les kernels s'arrêtent à sm_90
+# → "CUDA error: no kernel image is available" sur Blackwell. On remplace ses binaires
+# torch par le build **cu128** (kernels sm_120). Le CDN R2 de PyTorch (download-r2)
+# étant bloqué par le réseau (échec TLS), la wheel est téléchargée côté hôte depuis
+# download.pytorch.org (voir vendor/) et installée **hors-ligne**.
+FROM ghcr.io/remsky/kokoro-fastapi-gpu:latest
+
+# 1) Libs CUDA en 12.8 (l'image les a en 12.6). Indispensable : NVRTC 12.6 ne connaît pas
+# -arch=sm_120 (échec JIT au warmup sur Blackwell). Versions = exactement celles exigées
+# par torch 2.8.0+cu128. Servies par pypi.nvidia.com (joignable ; le CDN R2 de PyTorch ne l'est pas).
+RUN uv pip install --python /app/.venv/bin/python --no-cache --index-url https://pypi.nvidia.com \
+    nvidia-cuda-nvrtc-cu12==12.8.93 \
+    nvidia-cuda-runtime-cu12==12.8.90 \
+    nvidia-cuda-cupti-cu12==12.8.90 \
+    nvidia-cudnn-cu12==9.10.2.21 \
+    nvidia-cublas-cu12==12.8.4.1 \
+    nvidia-cufft-cu12==11.3.3.83 \
+    nvidia-curand-cu12==10.3.9.90 \
+    nvidia-cusolver-cu12==11.7.3.90 \
+    nvidia-cusparse-cu12==12.5.8.93 \
+    nvidia-cusparselt-cu12==0.7.1 \
+    nvidia-nccl-cu12==2.27.3 \
+    nvidia-nvtx-cu12==12.8.90 \
+    nvidia-nvjitlink-cu12==12.8.93 \
+    nvidia-cufile-cu12==1.13.1.3
+
+# 2) torch cu128 (kernels sm_120). Bind-mount du wheel (contexte de build) : monté seulement
+# pendant le RUN, jamais committé (contrairement à COPY qui gonflerait l'image de ~900 Mo).
+# --no-deps : les libs CUDA ci-dessus sont déjà les bonnes ; triton (3.4.0) est déjà présent.
+RUN --mount=type=bind,source=vendor/torch-2.8.0+cu128-cp310-cp310-manylinux_2_28_x86_64.whl,target=/tmp/torch-2.8.0+cu128-cp310-cp310-manylinux_2_28_x86_64.whl \
+    uv pip install --python /app/.venv/bin/python --no-cache --no-deps \
+    --reinstall-package torch /tmp/torch-2.8.0+cu128-cp310-cp310-manylinux_2_28_x86_64.whl
+
+# Sanity check au build : bon build (cu128) ET import réussi (valide l'ABI des libs CUDA).
+RUN /app/.venv/bin/python -c "import torch; print('torch', torch.__version__); assert 'cu128' in torch.__version__, torch.__version__"

@@ -1,0 +1,36 @@
+{
+  "reportsDir": "../report",
+  "port": 8830,
+  "engine": "kokoro",
+  "kokoro": {
+    "baseUrl": "http://localhost:8880/v1",
+    "defaultVoice": "ff_siwis",
+    "voices": [
+      { "id": "ff_siwis",            "label": "Siwis — féminine (pure)", "gender": "female" },
+      { "id": "ff_siwis+af_heart",   "label": "Siwis — chaleureuse",     "gender": "female" },
+      { "id": "ff_siwis+bf_emma",    "label": "Siwis — posée",           "gender": "female" },
+      { "id": "ff_siwis+af_bella",   "label": "Siwis — douce",           "gender": "female" },
+      { "id": "ff_siwis+am_michael", "label": "Siwis — timbre grave",    "gender": "male" },
+      { "id": "ff_siwis+bm_george",  "label": "Siwis — grave (UK)",      "gender": "male" }
+    ]
+  },
+  "piper": {
+    "modelsDir": "./models/piper",
+    "defaultVoice": "fr_FR-siwis-medium"
+  },
+  "audio": {
+    "format": "mp3",
+    "defaultSpeed": 1.0
+  },
+  "normalizer": {
+    "speakCodeBlocks": false,
+    "codeBlockPlaceholder": "exemple de code, voir le rapport écrit",
+    "speakTables": false,
+    "announceHeadings": true,
+    "lexicon": "./config/lexicon.json"
+  },
+  "podcast": {
+    "enabled": true,
+    "baseUrl": "http://localhost:8830"
+  }
+}

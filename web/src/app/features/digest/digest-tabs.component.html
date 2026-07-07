@@ -29,6 +29,11 @@
         }
       </button>
     </div>
+
+    <!-- Lecture vocale — dev uniquement : @if(isDev) → zéro empreinte en prod. -->
+    @if (isDev) {
+      <app-speaker-player [veilleId]="speakerId()" [available]="speakerAvailable()" />
+    }
   </div>
 }
 

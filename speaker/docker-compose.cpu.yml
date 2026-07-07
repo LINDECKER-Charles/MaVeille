@@ -1,0 +1,30 @@
+# Variante CPU — même moteur Kokoro-82M et même voix (ff_siwis), sans GPU.
+# À utiliser quand le GPU n'est pas exploitable par l'image (ex. Blackwell/RTX 50xx
+# sm_120 non couvert par le PyTorch de l'image GPU). Génération plus lente, voix identique.
+#
+#   docker compose -f docker-compose.cpu.yml up --build
+#   (ou : speaker-cpu.cmd)
+
+services:
+  kokoro:
+    image: ghcr.io/remsky/kokoro-fastapi-cpu:latest
+    ports:
+      - "8880:8880"
+    restart: unless-stopped
+
+  speaker:
+    build: .
+    ports:
+      - "8830:8830"
+    depends_on:
+      - kokoro
+    environment:
+      SPEAKER_ENGINE: kokoro
+      KOKORO_BASE_URL: http://kokoro:8880/v1
+      SPEAKER_REPORTS_DIR: /reports
+      SPEAKER_PORT: "8830"
+    volumes:
+      - ../report:/reports:ro
+      - ./cache:/app/cache
+      - ./config:/app/config
+    restart: unless-stopped
