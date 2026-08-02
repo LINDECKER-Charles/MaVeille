@@ -152,4 +152,3 @@ Ce motif est exactement celui de tes handlers d'upload .NET/Symfony : **allowlis
 
 ---
 *Généré le 2026-07-13 par la routine `weekly` (Claude Cowork). Couvre 2026-07-06 → 2026-07-12.*
-            
