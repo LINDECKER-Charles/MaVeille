@@ -37,7 +37,7 @@ Des routines planifiées parcourent chaque jour l'actualité des thématiques su
 ---
 
 <div align="center">
-  <img src="docs/screenshots/home.png" alt="Page d'accueil — briefing du jour, KPIs et recherche" width="80%" />
+  <img src="docs/screenshots/home.png" alt="Briefing du jour — ce qu'il faut retenir, les sujets, les sources" width="80%" />
 </div>
 
 ## <img src="https://api.iconify.design/lucide/info.svg?color=%236366f1" width="22" height="22" alt="" /> En bref
@@ -68,28 +68,32 @@ Le tout est déduit du contenu : ajouter une thématique ne demande **aucune lig
 
 ## <img src="https://api.iconify.design/lucide/image.svg?color=%236366f1" width="22" height="22" alt="" /> Aperçu
 
-| Briefing du jour | Vue détaillée d'un rapport |
+| Briefing du jour | Lecture d'un sujet |
 |---|---|
-| ![Accueil](docs/screenshots/home.png) | ![Digest](docs/screenshots/digest.png) |
-| **Statistiques & régularité** | **Rapports hebdomadaires** |
-| ![Stats](docs/screenshots/stats.png) | ![Rapports](docs/screenshots/rapports.png) |
+| ![Briefing](docs/screenshots/home.png) | ![Lecteur de sujet](docs/screenshots/digest.png) |
+| **Le fil — tous les sujets** | **Régularité** |
+| ![Fil](docs/screenshots/fil.png) | ![Régularité](docs/screenshots/stats.png) |
+| **Rapports hebdomadaires** | **Thème clair** |
+| ![Rapports](docs/screenshots/rapports.png) | ![Thème clair](docs/screenshots/home-light.png) |
 
 <div align="center">
-  <img src="docs/screenshots/home-light.png" alt="Thème clair" width="48%" />
-  <img src="docs/screenshots/mobile-home.png" alt="Vue mobile" width="22%" />
+  <img src="docs/screenshots/mobile-home.png" alt="Vue mobile" width="24%" />
 </div>
 
-<p align="center"><em>Thème clair/sombre · responsive jusqu'au mobile.</em></p>
+<p align="center"><em>Sous 900px, le rail devient une barre d'onglets et le tiroir « … » ouvre la navigation complète.</em></p>
 
 ## <img src="https://api.iconify.design/lucide/list-checks.svg?color=%236366f1" width="22" height="22" alt="" /> Fonctionnalités
 
-- **Briefing quotidien** — « à retenir en 1 minute », accès direct au dernier digest, badge « nouveau ».
-- **Recherche plein-texte** — index construit au build, snippets surlignés, filtres par catégorie / type (synthèse, détail) / tags.
-- **Page rapport** — onglets par catégorie, bascule synthèse ↔ détail, sujets dépliables, sources citées.
-- **Statistiques** — heatmap de régularité, courbe de volume, répartition par catégorie, KPIs.
-- **Rapports hebdomadaires** — synthèses transversales par semaine ISO.
+- **Briefing du jour** — « à retenir en 1 minute » par thématique, les sujets du jour, les sources citées, les chiffres du jour, et les jours précédents à portée de clic.
+- **Lecteur de sujet** — un mini-cours par sujet : sommaire, source primaire, enchaînement précédent/suivant, plus deux vues alternatives (« code seul », « sources »). Permalien `?sujet=<thématique>-<n>`.
+- **Le fil** — les 400+ sujets de tous les jours dans un tableau dense, filtrable par thématique et par période.
+- **Par jour** — l'historique, une accroche générée par digest.
+- **Palette ⌘K** — recherche par titre de sujet, puis plein texte sur le corps des digests ; navigation au clavier.
+- **Régularité** — heatmap façon GitHub, courbe de volume, répartition de l'effort par thématique.
+- **Rapports hebdomadaires** — synthèses transversales par semaine ISO, plage de dates dérivée de l'identifiant.
+- **Ma lecture** — suivi lu/non-lu tenu en local (`localStorage`), jamais envoyé.
 - **Code & diagrammes** — coloration syntaxique **au build** (Shiki, thème dual light/dark), diagrammes **Mermaid** rendus côté client en lazy.
-- **Thème clair/sombre** persistant, mode confort/compact, accessible (axe-core en CI).
+- **Thème clair/sombre** persistant, profondeur de lecture mémorisée, accessible (axe-core + Lighthouse en CI).
 
 ## <img src="https://api.iconify.design/lucide/workflow.svg?color=%236366f1" width="22" height="22" alt="" /> Comment ça marche
 
@@ -119,6 +123,7 @@ Veille/
 ├── docs/                   # Documentation (archi, design, captures)
 ├── config/                 # Vhosts Apache (templates versionnés)
 ├── archive/                # Anciens rapports gelés (dont recaps quotidiens)
+├── compose.yaml            # Environnement local (build statique + nginx)
 └── DIGEST_FORMAT.md        # Contrat de format imposé aux routines
 ```
 
@@ -144,11 +149,27 @@ Architecture **data-driven** :
 
 App **Angular 20** standalone (signals, control-flow natif, `inject()`), **statique** (SSG/prerender) — aucun backend.
 
+### Avec Docker (recommandé)
+
+```bash
+docker compose up --build   # → http://localhost:4200
+```
+
+Le conteneur **construit** le site statique puis le sert avec nginx, en reprenant
+les en-têtes du vhost de production (CSP stricte, repli SPA, cache long sur les
+assets hashés). Pas de serveur de développement : après une modification du code
+ou de `report/`, relancer `docker compose up --build`.
+
+Image finale : **~43 Mo** — le build Node vit dans une étape jetée.
+
+### En local
+
 ```bash
 cd web
 npm install
-npm run dev      # http://localhost:4200
-npm run build    # → web/dist/veille/browser/ (statique)
+npm run generate   # obligatoire au premier lancement : émet src/app/data/generated/
+npm start          # http://localhost:4200
+npm run build      # → web/dist/veille/browser/ (statique, prebuild inclus)
 ```
 
 | Script | Rôle |
@@ -179,8 +200,8 @@ Configuration Apache (templates) : [`config/README.md`](config/README.md).
 | [`DIGEST_FORMAT.md`](DIGEST_FORMAT.md) | Contrat de format des rapports |
 | [`web/README.md`](web/README.md) | Détails techniques du viewer Angular |
 | [`docs/architecture-report.md`](docs/architecture-report.md) | Rapport d'architecture (migration Svelte → Angular) |
-| [`docs/design-analysis.md`](docs/design-analysis.md) | Analyse UX/UI + direction visuelle |
-| [`docs/claude-design-brief.md`](docs/claude-design-brief.md) | Brief de redesign pour Claude Design |
+| [`docs/design-analysis.md`](docs/design-analysis.md) | Analyse UX/UI + direction visuelle (le *pourquoi*) |
+| [`docs/claude-design-brief.md`](docs/claude-design-brief.md) | Brief de refonte remis à Claude Design — **réalisé** |
 
 ## <img src="https://api.iconify.design/lucide/copy-x.svg?color=%236366f1" width="22" height="22" alt="" /> Déduplication
 

@@ -1,5 +1,13 @@
 # Veille — Brief de design (handoff pour « Claude Design »)
 
+> **✅ Brief réalisé.** La refonte issue de ce handoff est en place. Le design system
+> (« Établi ») est vendu dans `web/src/styles/tokens/` et `web/src/styles/etabli-ui.css` ;
+> ses primitives Angular sont dans `web/src/app/ui/`. L'architecture d'information finale
+> est décrite dans [`../web/README.md`](../web/README.md) — elle diffère de ce brief sur un
+> point : `/digest/:date` rend le **briefing** du jour, et `?sujet=<thématique>-<n>` bascule
+> la même route en **lecteur de sujet** (un permalien par sujet, sans prérendre 426 pages).
+> Ce document reste la référence de l'**intention** ; le code fait foi sur le **détail**.
+
 > **À toi, Claude Design.** Tu vas refondre le front-end de Veille. Ce document décrit **l'expérience entière, l'intention, le contenu, chaque écran et chaque état, les composants, l'IA, l'accessibilité et les données** dont tu disposes. Tu as **toute latitude sur le style visuel** (palette exacte, valeurs en pixels, typo précise, ombres, courbes) — c'est ton métier, pas le mien. Je suis précis sur le **quoi / le comportement / le ressenti**, volontairement souple sur le **comment visuel**.
 >
 > Les **opinions et recommandations priorisées** (et leur justification) sont dans [`design-analysis.md`](./design-analysis.md). Je n'y reviens pas ; je m'y réfère. Le **contrat de données** fait foi : [`../DIGEST_FORMAT.md`](../DIGEST_FORMAT.md). Contexte technique : [`./architecture-report.md`](./architecture-report.md).

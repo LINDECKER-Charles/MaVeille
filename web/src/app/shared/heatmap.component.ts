@@ -40,6 +40,8 @@ function startMonday(d: Date): Date {
     <div class="hm-wrap">
       <svg
         [attr.viewBox]="'0 0 ' + width() + ' ' + height"
+        [attr.width]="width()"
+        [attr.height]="height"
         role="img"
         [attr.aria-label]="ariaLabel()"
         preserveAspectRatio="xMinYMin meet"
@@ -84,12 +86,21 @@ function startMonday(d: Date): Date {
   `,
   styles: [
     `
+      /* Le graphe a une taille intrinsèque : l'hôte s'y ajuste pour que la
+         légende se cale sous les cases, et non à l'autre bout du panneau. */
+      :host {
+        display: block;
+        width: max-content;
+        max-width: 100%;
+      }
       .hm-wrap {
         overflow-x: auto;
       }
+      /* Taille intrinsèque, jamais agrandie : sans cotes explicites le SVG
+         s'étirait à la largeur du conteneur et les libellés d'axe doublaient.
+         En dessous, c'est .hm-wrap qui défile — comportement d'origine. */
       svg {
         display: block;
-        min-width: 100%;
       }
       .axis {
         fill: var(--faint, var(--text-dim));

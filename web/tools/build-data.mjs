@@ -550,9 +550,85 @@ function buildMeta(index) {
         date,
         categories: categories.sort(),
         totalSubjects,
-        totalSources
+        totalSources,
+        // Enrichis pendant la boucle de rendu d'emit(), qui a le HTML sous la main.
+        readingMinutes: 0
       };
     });
+}
+
+/**
+ * Premier paragraphe d'un fragment HTML. Sans ça, `firstSentence` recolle le
+ * titre de section et la phrase qui suit, et l'accroche part de travers.
+ * @param {string} html
+ */
+function firstParagraph(html) {
+  const m = html.match(/<p[^>]*>([\s\S]*?)<\/p>/i);
+  return m ? m[1] : html;
+}
+
+/** Host d'une URL, `www.` retiré. Retourne undefined si l'URL est illisible. */
+/** @param {string | undefined} url */
+function domainOf(url) {
+  if (!url) return undefined;
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Aplatit un digest rendu en lignes « un sujet », et renvoie au passage les
+ * agrégats jour dont la liste par jour a besoin (temps de lecture, accroche).
+ * @param {{ date: string, categories: any[] }} rendered
+ * @param {Map<string, any>} regByName
+ */
+function flattenSubjects(rendered, regByName) {
+  const subjects = [];
+  let readingMinutes = 0;
+  let headline;
+  let headlineWeight = -1;
+
+  for (const cat of rendered.categories) {
+    const reg = regByName.get(cat.category);
+    const slug = reg?.slug ?? slugify(cat.category);
+    const mono = reg?.monogram ?? defaultMonogram(cat.category);
+    readingMinutes += cat.detailMinutes ?? 0;
+
+    const snippets = cat.detailSnippets ?? [];
+    for (const s of snippets) {
+      subjects.push({
+        date: rendered.date,
+        category: cat.category,
+        slug,
+        mono,
+        index: s.index,
+        title: s.title,
+        source: s.source,
+        sourceUrl: s.sourceUrl,
+        domain: domainOf(s.sourceUrl),
+        readingMinutes: s.readingMinutes
+      });
+    }
+
+    // L'accroche du jour vient de la catégorie la mieux fournie qui a une synthèse.
+    if (cat.syntheseHtml && snippets.length > headlineWeight) {
+      const text = firstSentence(firstParagraph(cat.syntheseHtml), 110);
+      if (text) {
+        headline = text;
+        headlineWeight = snippets.length;
+      }
+    }
+  }
+
+  const first = subjects[0];
+  return {
+    subjects,
+    readingMinutes,
+    headline,
+    firstSubject: first ? `${first.slug}-${first.index}` : undefined
+  };
 }
 
 function computeStats(index, meta) {
@@ -604,6 +680,31 @@ function extractWeekId(path) {
   return m ? `${m[1]}-W${m[2]}` : null;
 }
 
+/** Date UTC au format ISO court. @param {Date} d */
+function isoDay(d) {
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Lundi et dimanche d'une semaine ISO, depuis son identifiant `YYYY-Www`.
+ * Ancré sur le 4 janvier, qui appartient toujours à la semaine 1 ; tout est
+ * calculé en UTC pour rester insensible aux changements d'heure.
+ * @param {string} id
+ */
+function isoWeekRange(id) {
+  const m = id.match(/^(\d{4})-W(\d{1,2})$/);
+  if (!m) return null;
+
+  const jan4 = new Date(Date.UTC(Number(m[1]), 0, 4));
+  const dow = (jan4.getUTCDay() + 6) % 7; // 0 = lundi
+  const monday = new Date(jan4);
+  monday.setUTCDate(jan4.getUTCDate() - dow + (Number(m[2]) - 1) * 7);
+  const sunday = new Date(monday);
+  sunday.setUTCDate(monday.getUTCDate() + 6);
+
+  return { start: isoDay(monday), end: isoDay(sunday) };
+}
+
 /**
  * Parse `report/weekly/YYYY-Www_weekly.md` into rendered WeeklyReport objects.
  * Title = leading H1; body rendered to sanitized HTML. Optional frontmatter
@@ -627,14 +728,28 @@ async function buildWeeklies() {
         rangeEnd = parts[1];
       }
     }
+    // Sans frontmatter `range`, l'identifiant de semaine suffit à retrouver la
+    // plage : c'est ce qui débloque le libellé ET la distribution par thématique
+    // pour les rapports qui ne la déclarent pas.
+    if (!rangeStart || !rangeEnd) {
+      const derived = isoWeekRange(id);
+      if (derived) {
+        rangeStart = derived.start;
+        rangeEnd = derived.end;
+      }
+    }
 
+    const html = await renderMarkdown(rest);
     weeklies.push({
       id,
       title: title ?? id,
       range,
       rangeStart,
       rangeEnd,
-      html: await renderMarkdown(rest)
+      excerpt: firstSentence(firstParagraph(html), 150) || undefined,
+      // Transporté séparément : `emit()` l'écrit dans son propre JSON paresseux
+      // et ne garde que les métadonnées dans l'index eager.
+      html
     });
   }
   weeklies.sort((a, b) => (a.id < b.id ? 1 : -1)); // newest first
@@ -644,65 +759,6 @@ async function buildWeeklies() {
 /** @param {unknown} v */
 function strOf(v) {
   return typeof v === 'string' && v.trim() ? v.trim() : undefined;
-}
-
-// ---------------------------------------------------------------------------
-// Morning briefing (eager) — derived from the most recent digest
-// ---------------------------------------------------------------------------
-const FR_FULL_FMT = new Intl.DateTimeFormat('fr-FR', {
-  weekday: 'long',
-  day: 'numeric',
-  month: 'long',
-  year: 'numeric'
-});
-
-/** Long French date, e.g. "vendredi 20 juin 2026" (mirrors date.util.formatDateFull). */
-/** @param {string} iso */
-function formatDateFull(iso) {
-  const [y, m, d] = iso.split('-').map(Number);
-  return FR_FULL_FMT.format(new Date(y, m - 1, d));
-}
-
-/**
- * Build the eager briefing from the newest digest: one takeaway bullet per
- * category that has a synthese, plus day-level totals and reading minutes.
- * @param {ReturnType<typeof buildIndex>} index
- * @param {ReturnType<typeof buildMeta>} meta
- * @param {ReturnType<typeof buildRegistry>} registry
- * @returns {Promise<import('../types').Briefing | null>}
- */
-async function buildBriefing(index, meta, registry) {
-  // meta is sorted newest-first.
-  const latest = meta[0];
-  if (!latest) return null;
-  const rendered = await renderDigest(index, latest.date);
-  const regByName = new Map(registry.map((c) => [c.name, c]));
-
-  const bullets = [];
-  let readingTotal = 0;
-  for (const cat of rendered.categories) {
-    if (!cat.syntheseHtml) continue;
-    const text = firstSentence(cat.syntheseHtml);
-    if (!text) continue;
-    const reg = regByName.get(cat.category);
-    bullets.push({
-      category: cat.category,
-      slug: reg?.slug ?? slugify(cat.category),
-      label: reg?.label ?? cat.category,
-      text
-    });
-    readingTotal += cat.syntheseMinutes ?? 0;
-  }
-
-  return {
-    date: latest.date,
-    title: formatDateFull(latest.date),
-    categories: latest.categories,
-    totalSubjects: latest.totalSubjects,
-    totalSources: latest.totalSources,
-    readingMinutes: readingTotal,
-    bullets
-  };
 }
 
 /**
@@ -824,29 +880,60 @@ async function emit() {
   const registry = buildRegistry(index.categories);
   const weeklies = await buildWeeklies();
   attachWeeklyDistribution(meta, index, registry, weeklies);
-  const briefing = await buildBriefing(index, meta, registry);
   const dates = meta.map((m) => m.date);
 
   rmSync(OUT_DIR, { recursive: true, force: true });
   mkdirSync(OUT_DIR, { recursive: true });
 
-  // Per-day rendered JSON (heavy, lazy-loaded).
+  // Per-day rendered JSON (heavy, lazy-loaded). The same pass feeds the flat
+  // subject index and back-fills each day's reading time + headline.
+  const regByName = new Map(registry.map((c) => [c.name, c]));
+  const metaByDate = new Map(meta.map((m) => [m.date, m]));
+  /** @type {any[]} */
+  const subjects = [];
   for (const date of dates) {
     const payload = await renderDigest(index, date);
     writeFileSync(join(OUT_DIR, `digest-${date}.json`), JSON.stringify(payload));
+
+    const flat = flattenSubjects(payload, regByName);
+    subjects.push(...flat.subjects);
+    const m = metaByDate.get(date);
+    if (m) {
+      m.readingMinutes = flat.readingMinutes;
+      if (flat.headline) m.headline = flat.headline;
+      if (flat.firstSubject) m.firstSubject = flat.firstSubject;
+    }
   }
 
-  // loaders.ts — esbuild code-splits each day import.
-  const loaderEntries = dates
+  // subject-index.json (lazy) — le fil « tous les sujets » et la palette ⌘K.
+  writeFileSync(join(OUT_DIR, 'subject-index.json'), JSON.stringify(subjects));
+
+  // Corps des rapports hebdo : ~30 ko chacun, lus sur une seule page. On les
+  // sort de l'index eager et on ne garde que les métadonnées + l'accroche.
+  for (const w of weeklies) {
+    writeFileSync(join(OUT_DIR, `weekly-${w.id}.json`), JSON.stringify({ id: w.id, html: w.html }));
+    delete w.html;
+  }
+
+  // loaders.ts — esbuild code-splits each day / week import.
+  const digestEntries = dates
     .map((d) => `  '${d}': () => import('./digest-${d}.json')`)
     .join(',\n');
+  const weeklyEntries = weeklies
+    .map((w) => `  '${w.id}': () => import('./weekly-${w.id}.json')`)
+    .join(',\n');
   const loadersTs = `// AUTO-GENERATED by tools/build-data.mjs — do not edit.
-import type { RenderedDigest } from '../types';
+import type { RenderedDigest, WeeklyBody } from '../types';
 
-type Loader = () => Promise<{ default: RenderedDigest }>;
+type DigestLoader = () => Promise<{ default: RenderedDigest }>;
+type WeeklyLoader = () => Promise<{ default: WeeklyBody }>;
 
-export const digestLoaders: Record<string, Loader> = {
-${loaderEntries}
+export const digestLoaders: Record<string, DigestLoader> = {
+${digestEntries}
+};
+
+export const weeklyLoaders: Record<string, WeeklyLoader> = {
+${weeklyEntries}
 };
 `;
   writeFileSync(join(OUT_DIR, 'loaders.ts'), loadersTs);
@@ -861,7 +948,6 @@ import type {
   OverallStats,
   CategoryRegistryEntry,
   WeeklyReport,
-  Briefing
 } from '../types';
 
 export const digests: DigestMeta[] = ${JSON.stringify(meta)};
@@ -872,8 +958,6 @@ export const categoryRegistry: CategoryRegistryEntry[] = ${JSON.stringify(regist
 
 export const weeklies: WeeklyReport[] = ${JSON.stringify(weeklies)};
 
-export const briefing: Briefing | null = ${JSON.stringify(briefing)};
-
 export const totals = {
   digests: ${meta.length},
   subjects: ${stats.totalSubjects},
@@ -883,7 +967,8 @@ export const totals = {
   writeFileSync(join(OUT_DIR, 'index.ts'), indexTs);
 
   console.log(
-    `[build-data] ${meta.length} digests · ${stats.totalSubjects} subjects · ${stats.totalSources} sources · ` +
+    `[build-data] ${meta.length} digests · ${stats.totalSubjects} subjects ` +
+      `(${subjects.length} indexed) · ${stats.totalSources} sources · ` +
       `${registry.length} categories · ${weeklies.length} weeklies -> ${OUT_DIR}`
   );
 }
@@ -900,7 +985,11 @@ export {
   defaultMonogram,
   readingMinutes,
   firstSentence,
+  firstParagraph,
   extractWeekId,
+  isoWeekRange,
+  domainOf,
+  flattenSubjects,
   buildEntryCounts,
   buildRegistry,
   renderMarkdown,

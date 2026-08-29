@@ -8,6 +8,41 @@ export interface DigestMeta {
   categories: Category[];
   totalSubjects: number;
   totalSources: number;
+  /** Sum of the day's per-category detail reading minutes. */
+  readingMinutes: number;
+  /**
+   * Generated one-line lead for the day: first sentence of the synthese of the
+   * category carrying the most subjects. Absent when no synthese was authored.
+   */
+  headline?: string;
+  /**
+   * Key of the day's first subject (`<slug>-<index>`), so any screen can deep
+   * link into the reader without loading the day's payload. Absent on a day
+   * that carries only syntheses.
+   */
+  firstSubject?: string;
+}
+
+/**
+ * One subject of one day, flattened across every category — the row model of
+ * the "tous les sujets" feed and of the command palette. Emitted as a lazily
+ * loaded `subject-index.json` so it never weighs on the initial bundle.
+ */
+export interface SubjectEntry {
+  /** ISO date (YYYY-MM-DD) of the digest the subject belongs to. */
+  date: string;
+  category: Category;
+  slug: string;
+  /** Short visual badge of the category, e.g. `AI`. */
+  mono: string;
+  /** Position of the subject inside the day's detail, e.g. `1`. */
+  index: string;
+  title: string;
+  source?: string;
+  sourceUrl?: string;
+  /** Host of `sourceUrl`, `www.` stripped — e.g. `huggingface.co`. */
+  domain?: string;
+  readingMinutes: number;
 }
 
 export interface DayActivity {
@@ -77,36 +112,32 @@ export interface CategoryRegistryEntry {
   order: number;
 }
 
-/** Authored weekly report (eagerly rendered to HTML by the generator). */
+/**
+ * Authored weekly report — metadata only. The rendered body is heavy (~30 kB
+ * each) and only ever read on one page, so it lives in a lazily loaded
+ * `weekly-<id>.json` instead of the eager index.
+ */
 export interface WeeklyReport {
   /** ISO week id, e.g. 2026-W25 */
   id: string;
   title: string;
   /** Optional covered range from frontmatter, e.g. 2026-06-15/2026-06-21 */
   range?: string;
+  /** Monday of the ISO week — from frontmatter, else derived from `id`. */
   rangeStart?: string;
+  /** Sunday of the ISO week — from frontmatter, else derived from `id`. */
   rangeEnd?: string;
-  /** Sanitized HTML rendered from the markdown body (H1 stripped). */
-  html: string;
+  /** First sentence of the body, for the list card. */
+  excerpt?: string;
   /** Optional per-category subject distribution over the covered range. */
   distribution?: { category: Category; slug: string; count: number }[];
 }
 
-/**
- * Eager morning briefing derived from the most recent digest. Surfaces a one-line
- * takeaway per category alongside day-level totals and synthese reading time.
- */
-export interface Briefing {
-  /** ISO date (YYYY-MM-DD) of the source digest. */
-  date: string;
-  /** Long French date, e.g. "vendredi 20 juin 2026". */
-  title: string;
-  categories: Category[];
-  totalSubjects: number;
-  totalSources: number;
-  /** Sum of per-category synthese reading minutes. */
-  readingMinutes: number;
-  bullets: { category: Category; slug: string; label: string; text: string }[];
+/** Lazily loaded body of one weekly report. */
+export interface WeeklyBody {
+  id: string;
+  /** Sanitized HTML rendered from the markdown body (H1 stripped). */
+  html: string;
 }
 
 /** Search index entry shape (search-index.json). */
