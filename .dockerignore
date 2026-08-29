@@ -1,0 +1,21 @@
+# Le contexte de build est la racine du dépôt : on en exclut tout ce qui est
+# lourd, reconstruit dans l'image, ou spécifique à la machine hôte.
+.git
+.github
+.idea
+
+# Dépendances et artefacts : réinstallés / régénérés dans le conteneur.
+# Surtout : les binaires natifs de l'hôte (macOS) ne tournent pas sous Linux.
+web/node_modules
+web/dist
+web/.angular
+web/coverage
+web/playwright-report
+web/test-results
+web/.lighthouseci
+
+# Données générées au build par tools/build-data.mjs.
+web/src/app/data/generated
+
+# Captures et rapports : sans effet sur le rendu de l'app.
+docs/screenshots

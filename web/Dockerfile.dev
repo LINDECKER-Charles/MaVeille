@@ -1,0 +1,40 @@
+# Environnement local du viewer : on construit le site statique, puis on le sert.
+#
+# Pas de serveur de développement. L'app est un site prérendu sans backend, et
+# la prod le sert tel quel derrière Apache — autant reproduire ça en local, avec
+# les mêmes en-têtes. Contrepartie assumée : il faut reconstruire après une
+# modification (`docker compose up --build`).
+#
+# Le contexte de build est la RACINE du dépôt, pas web/ : le générateur
+# (tools/build-data.mjs) lit report/ un cran au-dessus de web/.
+
+# --- Étape 1 : build ---------------------------------------------------------
+# Debian et non Alpine : esbuild et lightningcss, embarqués par @angular/build,
+# sont liés à la glibc. Cette étape est jetée, son poids n'a aucune importance.
+FROM node:24-bookworm-slim AS build
+
+ENV NG_CLI_ANALYTICS=false \
+    CI=true
+
+WORKDIR /app/web
+
+# Couche de dépendances isolée : reconstruite seulement si le lockfile bouge.
+COPY web/package.json web/package-lock.json ./
+RUN npm ci
+
+# Le contenu (report/) et le code : `npm run build` enchaîne le générateur
+# (hook prebuild) puis le prérendu d'une page HTML par route.
+WORKDIR /app
+COPY . .
+WORKDIR /app/web
+RUN npm run build
+
+# --- Étape 2 : service -------------------------------------------------------
+# alpine-slim : nginx sans les modules dont un site statique n'a que faire.
+FROM nginx:1-alpine-slim
+
+COPY web/docker/nginx.conf /etc/nginx/conf.d/default.conf
+COPY web/docker/security-headers.conf /etc/nginx/security-headers.conf
+COPY --from=build /app/web/dist/veille/browser /usr/share/nginx/html
+
+EXPOSE 80
