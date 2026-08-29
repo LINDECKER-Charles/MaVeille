@@ -1,122 +1,104 @@
 <a href="#main" class="skip-link">Aller au contenu principal</a>
 
-<!-- Liens de navigation — partagés entre la nav desktop et le tiroir mobile. -->
-<ng-template #navTpl>
-  @for (link of navLinks; track link.path) {
-    <a
-      [routerLink]="link.path"
-      class="nav-link"
-      routerLinkActive="active"
-      [routerLinkActiveOptions]="{ exact: link.exact }"
-      #rla="routerLinkActive"
-      [attr.aria-current]="rla.isActive ? 'page' : null"
-      (click)="closeMenu()"
-    >
-      {{ link.label }}
+<div class="shell" [class.menu-open]="menuOpen()" [attr.inert]="paletteOpen() ? '' : null">
+  <header class="shell__top">
+    <a routerLink="/" class="brand" aria-label="Veille — accueil">
+      <span class="wordmark"><span class="brand-v" aria-hidden="true">V</span>eille</span>
     </a>
-  }
-</ng-template>
+    @if (currentWeek(); as week) {
+      <app-badge size="sm" [mono]="true" class="brand-week">{{ week }}</app-badge>
+    }
 
-<div class="shell">
-  <header [class.menu-open]="menuOpen()">
-    <div class="header-inner">
-      <button
-        class="nav-toggle"
-        type="button"
-        (click)="toggleMenu()"
-        [attr.aria-expanded]="menuOpen()"
-        aria-controls="mobile-menu"
-        [attr.aria-label]="menuOpen() ? 'Fermer le menu' : 'Ouvrir le menu'"
-      >
-        <span aria-hidden="true">{{ menuOpen() ? '✕' : '☰' }}</span>
-      </button>
+    <!-- Déclencheur de recherche : un bouton qui a l'allure d'un champ. La
+         saisie se fait dans la palette, seule surface de recherche de l'app. -->
+    <button type="button" class="search-trigger" (click)="openPalette()">
+      <app-icon name="search" [size]="14" />
+      <span class="search-trigger__label">Chercher un sujet, une source, une techno…</span>
+      <app-kbd keys="cmd+k" />
+    </button>
 
-      <a routerLink="/" class="brand" aria-label="Veille — accueil">
-        <span class="logo" aria-hidden="true">V</span>
-        <span class="wordmark">Veille</span>
-      </a>
+    <span class="shell__spacer"></span>
 
-      <nav class="primary-nav" aria-label="Navigation principale">
-        <ng-container [ngTemplateOutlet]="navTpl" />
-      </nav>
+    <span class="shell__status-hint">dernier digest · {{ lastDigestAgo() }}</span>
 
-      <span class="spacer"></span>
+    <app-icon-button
+      class="theme-toggle"
+      [icon]="theme() === 'dark' ? 'sun' : 'moon'"
+      [label]="'Passer en mode ' + (theme() === 'dark' ? 'clair' : 'sombre')"
+      (click)="toggleTheme()"
+    />
 
-      <button class="search-btn" type="button" (click)="goSearch()" aria-label="Rechercher">
-        <span class="search-icon" aria-hidden="true">⌕</span>
-        <span class="search-label">Rechercher</span>
-        <kbd aria-hidden="true">/</kbd>
-      </button>
+    <a
+      class="etb-iconbtn doc-link"
+      [href]="DIGEST_FORMAT_URL"
+      target="_blank"
+      rel="noopener noreferrer"
+      title="Format des digests"
+      aria-label="Format des digests (nouvel onglet)"
+    >
+      <app-icon name="book-open" [size]="16" />
+    </a>
 
-      <div class="segmented" role="radiogroup" aria-label="Densité d'affichage">
-        <button
-          type="button"
-          role="radio"
-          [attr.aria-checked]="prefs.density() === 'comfort'"
-          [class.active]="prefs.density() === 'comfort'"
-          (click)="setDensity('comfort')"
-        >
-          Confort
-        </button>
-        <button
-          type="button"
-          role="radio"
-          [attr.aria-checked]="prefs.density() === 'compact'"
-          [class.active]="prefs.density() === 'compact'"
-          (click)="setDensity('compact')"
-        >
-          Compact
-        </button>
-      </div>
-
-      <button
-        class="theme-toggle"
-        type="button"
-        (click)="toggleTheme()"
-        [attr.aria-label]="'Passer en mode ' + (theme() === 'dark' ? 'clair' : 'sombre')"
-        title="Thème"
-      >
-        <span aria-hidden="true">{{ theme() === 'dark' ? '☀' : '☾' }}</span>
-      </button>
-    </div>
-
-    <!-- Tiroir mobile : affiché sous 900px quand menuOpen() (cf. app.css). -->
-    <nav id="mobile-menu" class="mobile-menu" aria-label="Navigation mobile">
-      <ng-container [ngTemplateOutlet]="navTpl" />
-      <div class="mobile-density" role="radiogroup" aria-label="Densité d'affichage">
-        <span class="mobile-density-label">Densité</span>
-        <div class="segmented">
-          <button
-            type="button"
-            role="radio"
-            [attr.aria-checked]="prefs.density() === 'comfort'"
-            [class.active]="prefs.density() === 'comfort'"
-            (click)="setDensity('comfort')"
-          >
-            Confort
-          </button>
-          <button
-            type="button"
-            role="radio"
-            [attr.aria-checked]="prefs.density() === 'compact'"
-            [class.active]="prefs.density() === 'compact'"
-            (click)="setDensity('compact')"
-          >
-            Compact
-          </button>
-        </div>
-      </div>
-    </nav>
+    <button
+      class="nav-toggle"
+      type="button"
+      (click)="toggleMenu()"
+      [attr.aria-expanded]="menuOpen()"
+      aria-controls="mobile-menu"
+      [attr.aria-label]="menuOpen() ? 'Fermer le menu' : 'Ouvrir le menu'"
+    >
+      <app-icon [name]="menuOpen() ? 'x' : 'ellipsis'" [size]="18" />
+    </button>
   </header>
 
-  <main id="main" tabindex="-1">
+  <nav class="shell__rail primary-nav" aria-label="Navigation principale">
+    <app-shell-nav />
+    <span class="shell__spacer"></span>
+    <button type="button" class="rail__hint" (click)="openPalette()">
+      <app-kbd keys="cmd+k" />
+      <span>ouvrir un sujet</span>
+    </button>
+  </nav>
+
+  <main id="main" class="shell__main" tabindex="-1" [attr.inert]="menuOpen() ? '' : null">
     <router-outlet />
   </main>
 
-  <footer>
-    <span>
-      Généré quotidiennement via Claude Cowork —
-      <a href="https://github.com" rel="noopener noreferrer">source</a>
-    </span>
+  <footer class="shell__status">
+    <span class="etb-dot etb-dot--success"></span>
+    <span>site statique</span><span aria-hidden="true">·</span>
+    <span>aucune donnée envoyée</span><span aria-hidden="true">·</span>
+    <span>lecture suivie en local</span>
+    <span class="shell__spacer"></span>
+    <span>{{ totalSubjects }} sujets indexés</span><span aria-hidden="true">·</span>
+    <span>{{ period() }}</span>
   </footer>
+
+  <!-- Barre d'onglets mobile : les quatre destinations qui portent le parcours. -->
+  <nav class="shell__tabs" aria-label="Navigation mobile">
+    @for (tab of tabs; track tab.label) {
+      <a
+        class="tab"
+        [routerLink]="tab.path"
+        routerLinkActive="tab--on"
+        [routerLinkActiveOptions]="tab.activeOptions"
+      >
+        <app-icon [name]="tab.icon!" [size]="18" />
+        <span>{{ tab.label }}</span>
+      </a>
+    }
+    <button type="button" class="tab" (click)="openPalette()">
+      <app-icon name="search" [size]="18" />
+      <span>Chercher</span>
+    </button>
+  </nav>
+
+  <!-- Tiroir mobile : le rail complet, hors des quatre onglets. -->
+  <nav id="mobile-menu" class="mobile-menu" aria-label="Navigation complète">
+    <app-shell-nav (navigated)="closeMenu()" />
+  </nav>
 </div>
+
+@if (paletteOpen()) {
+  <app-command-palette [(open)]="paletteOpen" />
+}

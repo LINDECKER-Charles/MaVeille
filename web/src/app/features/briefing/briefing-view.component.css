@@ -1,0 +1,138 @@
+:host {
+  display: contents;
+}
+
+.filters {
+  display: flex;
+  align-items: center;
+  gap: var(--space-15);
+  flex-wrap: wrap;
+  padding: var(--space-2) var(--space-5);
+  background: var(--surface-chrome);
+  border-bottom: 1px solid var(--divider);
+  flex: none;
+}
+
+.takeaways {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.takeaways li {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+.takeaways .mono-chip {
+  margin-top: 1px;
+}
+
+.row-card__num {
+  font: var(--type-code-sm);
+  color: var(--text-muted);
+}
+
+.empty-line {
+  font: var(--type-small);
+  color: var(--text-muted);
+  padding: var(--space-4) 0;
+}
+
+.synthesis + .synthesis {
+  margin-top: var(--space-6);
+}
+
+/* ---- Panneau latéral ---- */
+.source-list,
+.recent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.source {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+}
+.source:hover {
+  background: var(--ghost-bg-hover);
+  text-decoration: none;
+  color: var(--text-secondary);
+}
+.source .mono-chip {
+  margin-top: 1px;
+}
+.source__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.source__domain {
+  font: var(--type-code-sm);
+  color: var(--text-link);
+  overflow-wrap: anywhere;
+}
+.source__title {
+  font: var(--type-caption);
+  color: var(--text-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.recent {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-15) var(--space-2);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+}
+.recent:hover {
+  background: var(--ghost-bg-hover);
+  text-decoration: none;
+  color: var(--text-secondary);
+}
+/* La journée suivante remonte en tête : on la distingue sans la crier. */
+.recent--next .recent__date {
+  color: var(--text-link);
+}
+
+.recent__date {
+  flex: none;
+  min-width: 74px;
+  font: var(--type-code-sm);
+  color: var(--text-secondary);
+}
+.recent__cats {
+  flex: 1;
+  min-width: 0;
+  font: var(--type-caption);
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.recent__n {
+  flex: none;
+  font: var(--type-code-sm);
+  color: var(--text-muted);
+}
+
+@media (max-width: 899.98px) {
+  .filters {
+    padding-left: var(--space-3);
+    padding-right: var(--space-3);
+  }
+}

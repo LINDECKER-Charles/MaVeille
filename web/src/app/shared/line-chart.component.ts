@@ -5,7 +5,10 @@ const PAD_L = 30;
 const PAD_R = 12;
 const PAD_T = 12;
 const PAD_B = 24;
-const WIDTH = 660;
+// Largeur intrinsèque du viewBox. Elle sert de plafond de rendu : au-delà, le
+// SVG s'agrandirait et la typographie de l'axe avec lui (11px devenait ~19px
+// dans un panneau plein écran). En dessous, il se réduit comme avant.
+const WIDTH = 900;
 
 @Component({
   selector: 'app-line-chart',
@@ -48,6 +51,10 @@ const WIDTH = 660;
   `,
   styles: [
     `
+      :host {
+        display: block;
+        max-width: 900px;
+      }
       svg {
         display: block;
         width: 100%;

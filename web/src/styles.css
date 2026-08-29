@@ -1,184 +1,181 @@
 /* ============================================================================
-   Veille — Design system (refonte)
-   Tokens oklch (spec §1) + alias legacy pour migration progressive.
-   Theming via CSS custom properties sous :root[data-theme] + :root:not([data-theme]).
+   Veille — feuille globale.
+
+   Trois couches, dans cet ordre :
+   1. Établi   — tokens + composants du design system (styles/**), copie conforme.
+   2. Passerelle — alias legacy (--bg, --accent, --cat-*, --heatmap-*…) que du
+      TypeScript et des composants non refondus lisent encore. Ne pas renommer
+      sans balayer src/ : DigestStore.accentFor() et HeatmapComponent.levelFor()
+      construisent ces noms par interpolation de chaîne.
+   3. Coque applicative — les classes d'écran partagées (.screen, .side-panel,
+      .kpi…). Elles vivent ici et non dans les composants parce que le budget
+      angular.json plafonne chaque feuille de composant à 8 kB.
    ========================================================================== */
 
 /* Polices self-hosted (woff2 bundlés) — aucune ressource externe, CSP-safe.
-   Polices variables : couvrent tous les poids utilisés (Inter 400→800, dont 450). */
-@import '@fontsource-variable/inter/index.css';
-@import '@fontsource-variable/jetbrains-mono/index.css';
+   IBM Plex Sans en variable (100→700) ; IBM Plex Mono aux 3 graisses utilisées. */
+@import '@fontsource-variable/ibm-plex-sans/index.css';
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/500.css';
+@import '@fontsource/ibm-plex-mono/600.css';
 
+@import './styles/tokens/colors.css';
+@import './styles/tokens/typography.css';
+@import './styles/tokens/spacing.css';
+@import './styles/tokens/radius.css';
+@import './styles/tokens/elevation.css';
+@import './styles/tokens/motion.css';
+@import './styles/tokens/semantic.css';
+@import './styles/tokens/theme-dark.css';
+@import './styles/etabli-ui.css';
+
+/* ---------------------------------------------------------------------------
+   2. Passerelle legacy — thème clair
+   --------------------------------------------------------------------------- */
 :root {
-  /* --- Typo --- */
-  --font-sans: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Consolas, monospace;
+  /* Écart assumé vis-à-vis d'Établi : en thème clair, --text-muted (graphite 500)
+     plafonne à 4,0:1 sur blanc — sous le seuil AA de 4,5:1 que la CI verrouille
+     (axe en `serious`, Lighthouse accessibilité ≥ 0,90). On descend d'un cran sur
+     la rampe. Le thème sombre garde la valeur du design system, qui y passe. */
+  --text-muted: var(--gr-600);
 
-  /* --- Rayons (spec §1.6) --- */
-  --radius-sm: 6px;
-  --radius: 10px;
+  --bg: var(--canvas);
+  --surface-2: var(--surface-muted);
+  --border: var(--border-default);
+  --text: var(--text-primary);
+  --muted: var(--text-secondary);
+  --faint: var(--text-muted);
+  --brand: var(--text-link);
+  --brand-soft: var(--primary-soft-bg);
+  --bg-elevated: var(--surface);
+  --bg-soft: var(--surface-muted);
+  --text-dim: var(--text-muted);
+  --accent: var(--text-link);
 
-  /* --- Densité (comfort = défaut, spec §1.1) --- */
-  --card-pad: 18px;
-  --feed-gap: 13px;
-  --lh: 1.62;
+  /* Demi-pas 14px du design, entre --space-3 et --space-4. Il vit ici et non
+     dans les tokens, qui restent une copie conforme du design system. */
+  --pad-card: 14px;
+
+  /* Accents par catégorie. Reprennent les teintes historiques (rouge, prune,
+     vert, ambre) dans la palette Établi, pour que les graphiques restent
+     lisibles sans introduire de couleur hors système. */
+  --cat-angular: var(--rd-600);
+  --cat-angular-soft: var(--rd-50);
+  --cat-csharp: var(--pl-600);
+  --cat-csharp-soft: var(--pl-50);
+  --cat-ia: var(--gn-600);
+  --cat-ia-soft: var(--gn-50);
+  --cat-tech: var(--am-600);
+  --cat-tech-soft: var(--am-50);
+
+  /* Rampe heatmap — mono-teinte cobalt, densité croissante. */
+  --heatmap-0: var(--surface-muted);
+  --heatmap-1: var(--co-200);
+  --heatmap-2: var(--co-400);
+  --heatmap-3: var(--co-600);
+  --heatmap-4: var(--co-800);
 }
 
 /* ---------------------------------------------------------------------------
-   Thème DARK — appliqué à data-theme="dark" ET à :not([data-theme]) (anti-flash)
+   2 bis. Passerelle legacy — thème sombre (défaut, cf. tokens/theme-dark.css)
    --------------------------------------------------------------------------- */
-:root[data-theme="dark"],
+:root[data-theme='dark'],
 :root:not([data-theme]) {
-  --bg:            oklch(0.165 0.012 256);
-  --surface:       oklch(0.205 0.013 256);
-  --surface-2:     oklch(0.245 0.014 256);
-  --border:        oklch(0.295 0.012 256);
-  --border-strong: oklch(0.36  0.013 256);
-  --text:          oklch(0.95 0.005 256);
-  --muted:         oklch(0.70 0.012 256);
-  --faint:         oklch(0.56 0.012 256);
-  --brand:         oklch(0.70 0.13 255);
-  --brand-soft:    oklch(0.32 0.07 255);
-  --on-brand:      oklch(0.16 0.01 256);
+  --cat-angular: #f0a49c;
+  --cat-angular-soft: #2a1512;
+  --cat-csharp: #d0a4e8;
+  --cat-csharp-soft: #241730;
+  --cat-ia: #7fd0a4;
+  --cat-ia-soft: #14241c;
+  --cat-tech: #f0b878;
+  --cat-tech-soft: #2a1d0e;
 
-  --cat-angular: oklch(0.74 0.15 28);   --cat-angular-soft: oklch(0.31 0.07 28);
-  --cat-csharp:  oklch(0.74 0.13 305);  --cat-csharp-soft:  oklch(0.31 0.07 305);
-  --cat-ia:      oklch(0.76 0.12 168);  --cat-ia-soft:      oklch(0.31 0.06 168);
-  --cat-tech:    oklch(0.80 0.11 78);   --cat-tech-soft:    oklch(0.33 0.06 78);
-
-  --high:   oklch(0.78 0.14 30);
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 6px 20px -8px rgba(0, 0, 0, 0.5);
-
-  /* Rampe heatmap séquentielle mono-teinte dérivée de --brand (hue 255). */
-  --heatmap-0: var(--surface-2);
-  --heatmap-1: oklch(0.40 0.07 255);
-  --heatmap-2: oklch(0.52 0.10 255);
-  --heatmap-3: oklch(0.61 0.115 255);
-  --heatmap-4: oklch(0.70 0.13 255);
-
-  /* --- Alias legacy (composants existants : heatmap/markdown/kpis) --- */
-  --bg-elevated: var(--surface);
-  --bg-soft:     var(--surface-2);
-  --text-muted:  var(--muted);
-  --text-dim:    var(--faint);
-  --accent:      var(--brand);
-  --accent-soft: var(--brand-soft);
-  --success:     var(--cat-ia);
-  --warning:     var(--cat-tech);
-  --danger:      var(--cat-angular);
-  --code-bg:     var(--bg);
-  --shadow-sm:   var(--shadow);
-  --shadow-md:   var(--shadow);
+  /* La rampe s'inverse : sur fond sombre, « plus » = plus lumineux. */
+  --heatmap-1: #2b3768;
+  --heatmap-2: var(--co-700);
+  --heatmap-3: var(--co-500);
+  --heatmap-4: var(--co-300);
 }
 
 /* ---------------------------------------------------------------------------
-   Thème LIGHT
+   Reset / base — Établi, avec la base rem historique de 15px conservée : tous
+   les `rem` de l'app (markdown, graphiques) sont calibrés dessus.
    --------------------------------------------------------------------------- */
-:root[data-theme="light"] {
-  --bg:            oklch(0.985 0.004 80);
-  --surface:       oklch(1 0 0);
-  --surface-2:     oklch(0.965 0.005 80);
-  --border:        oklch(0.915 0.006 80);
-  --border-strong: oklch(0.85  0.008 80);
-  --text:          oklch(0.26 0.012 256);
-  --muted:         oklch(0.46 0.012 256);
-  /* --faint assombri pour tenir l'AA 4.5:1 sur surface (#fff) et bg (crème). */
-  --faint:         oklch(0.50 0.013 256);
-  --brand:         oklch(0.52 0.18 255);
-  --brand-soft:    oklch(0.95 0.035 255);
-  --on-brand:      oklch(0.99 0 0);
-
-  /* Accents catégorie assombris (light) : texte accent sur fond -soft tient l'AA. */
-  --cat-angular: oklch(0.515 0.20 28);  --cat-angular-soft: oklch(0.95  0.04  28);
-  --cat-csharp:  oklch(0.50 0.19 305);  --cat-csharp-soft:  oklch(0.955 0.03  305);
-  --cat-ia:      oklch(0.47 0.12 168);  --cat-ia-soft:      oklch(0.95  0.045 168);
-  --cat-tech:    oklch(0.475 0.115 78); --cat-tech-soft:    oklch(0.95  0.05  78);
-
-  --high:   oklch(0.55 0.19 30);
-  --shadow: 0 1px 2px rgba(20, 20, 40, 0.05), 0 8px 24px -12px rgba(20, 20, 40, 0.12);
-
-  /* Rampe heatmap (light) : --heatmap-0 = surface-2, lightness décroissante. */
-  --heatmap-0: var(--surface-2);
-  --heatmap-1: oklch(0.86 0.06 255);
-  --heatmap-2: oklch(0.72 0.11 255);
-  --heatmap-3: oklch(0.62 0.16 255);
-  --heatmap-4: oklch(0.52 0.18 255);
-
-  /* --- Alias legacy --- */
-  --bg-elevated: var(--surface);
-  --bg-soft:     var(--surface-2);
-  --text-muted:  var(--muted);
-  --text-dim:    var(--faint);
-  --accent:      var(--brand);
-  --accent-soft: var(--brand-soft);
-  --success:     var(--cat-ia);
-  --warning:     var(--cat-tech);
-  --danger:      var(--cat-angular);
-  --code-bg:     var(--surface-2);
-  --shadow-sm:   var(--shadow);
-  --shadow-md:   var(--shadow);
-}
-
-/* Densité compact (spec §1.3) — neutre vis-à-vis du thème. */
-:root[data-density="compact"] {
-  --card-pad: 12px;
-  --feed-gap: 7px;
-  --lh: 1.5;
-}
-
-/* ---------------------------------------------------------------------------
-   Reset / base (spec §1.4)
-   --------------------------------------------------------------------------- */
-* {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
-}
-
-html,
-body {
-  margin: 0;
-  padding: 0;
 }
 
 html {
   font-size: 15px;
+  -webkit-text-size-adjust: 100%;
+  color-scheme: dark light;
 }
 
 body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--font-sans);
-  line-height: var(--lh);
-  min-height: 100vh;
+  margin: 0;
+  background: var(--canvas);
+  color: var(--text-primary);
+  font: var(--type-body);
+  letter-spacing: var(--tracking-body);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-  transition: background 0.25s, color 0.25s;
+}
+
+::selection {
+  background: var(--selection-bg);
+  color: var(--selection-fg);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin: 0;
+  font-family: var(--font-display);
+  letter-spacing: var(--tracking-heading);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  text-wrap: balance;
+}
+
+p {
+  margin: 0;
+  text-wrap: pretty;
 }
 
 a {
-  color: var(--brand);
+  color: var(--text-link);
   text-decoration: none;
-  border-bottom: 1px solid transparent;
-  transition: border-color 0.15s ease;
+  text-underline-offset: 2px;
+  transition: color var(--dur-fast) var(--ease-out);
 }
 a:hover {
-  border-bottom-color: var(--brand);
+  color: var(--text-link-hover);
+  text-decoration: underline;
+}
+
+code,
+kbd,
+samp,
+pre {
+  font-family: var(--font-mono);
+  letter-spacing: var(--tracking-mono);
 }
 
 code {
-  font-family: var(--font-mono);
-  background: var(--brand-soft);
-  color: var(--brand);
-  padding: 0.1em 0.4em;
-  border-radius: var(--radius-sm);
-  font-size: 0.9em;
+  font-size: 0.92em;
 }
 
 pre {
-  background: var(--code-bg);
-  padding: 1rem;
-  border-radius: var(--radius-sm);
+  background: var(--surface-code);
+  padding: var(--space-3);
+  border-radius: var(--radius-code);
   overflow-x: auto;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-subtle);
 }
 pre code {
   background: transparent;
@@ -187,42 +184,63 @@ pre code {
 }
 
 hr {
-  border: none;
-  border-top: 1px solid var(--border);
-  margin: 2rem 0;
+  border: 0;
+  border-top: 1px solid var(--divider);
+  margin: var(--space-4) 0;
 }
 
-/* ---------------------------------------------------------------------------
-   Accessibilité / motion (spec §1.7)
-   --------------------------------------------------------------------------- */
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+}
+
+:where(button) {
+  cursor: pointer;
+}
+
 *:focus-visible {
-  outline: 2px solid var(--brand);
-  outline-offset: 2px;
-  border-radius: 3px;
+  outline: 2px solid var(--border-focus);
+  outline-offset: 1px;
+  border-radius: var(--radius-xs);
 }
 
-::selection {
-  background: var(--brand-soft);
+/* Barres de défilement discrètes — le châssis Établi défile beaucoup. */
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
 }
-
-@keyframes vSlideIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: none; }
+*::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border: 3px solid transparent;
+  background-clip: content-box;
+  border-radius: var(--radius-pill);
 }
-@keyframes vExpand {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  * {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
 /* ---------------------------------------------------------------------------
-   Utilitaires partagés
+   3. Coque applicative — chrome d'écran partagé par toutes les vues
    --------------------------------------------------------------------------- */
 .visually-hidden {
   position: absolute;
@@ -236,72 +254,282 @@ hr {
   border: 0;
 }
 
-/* Pastille de catégorie (couleurs via --cat-accent / --cat-soft du parent). */
-.cat-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 2px 8px 2px 6px;
-  border-radius: 999px;
-  font-size: 11.5px;
-  font-weight: 600;
-  color: var(--cat-accent);
-  background: var(--cat-soft);
-  white-space: nowrap;
+/* Écart assumé vis-à-vis d'Établi : dans le design system, un panneau vit dans
+   un volet de hauteur fixe et son corps défile. Ici les panneaux s'empilent dans
+   une page qui défile déjà — un second conteneur défilant ne ferait que créer
+   une région scrollable sans contenu focalisable (axe `scrollable-region-focusable`). */
+.etb-panel__body {
+  overflow: visible;
 }
-.cat-badge .mono {
+
+/* Un écran = en-tête + (barre d'outils) + corps qui défile seul. */
+.screen {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+
+.screen__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5) var(--space-3);
+  flex: none;
+}
+
+.screen__glyph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border-radius: var(--radius-md);
+  background: var(--surface-muted);
+  color: var(--text-secondary);
+  font: var(--type-code);
+}
+
+.screen__heading {
+  flex: 1;
+  min-width: 0;
+}
+
+.screen__title {
+  font: var(--type-heading);
+  letter-spacing: var(--tracking-heading);
+  margin: 0;
+}
+
+.screen__sub {
+  font: var(--type-caption);
+  color: var(--text-muted);
+}
+
+.screen__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: none;
+}
+
+/* Barre d'outils d'écran : filtres, densité de lecture, compteurs. */
+.screen__toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-inline);
+  min-height: 40px;
+  padding: var(--space-1) var(--space-5);
+  background: var(--surface-chrome);
+  border-top: 1px solid var(--divider);
+  border-bottom: 1px solid var(--divider);
+  flex: none;
+  flex-wrap: wrap;
+}
+
+.screen__body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: var(--space-5) var(--space-6) var(--space-12);
+}
+
+/* Corps + panneau latéral de contexte (sources, sommaire, chiffres du jour). */
+.screen__split {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--panel-w);
+}
+
+.screen__split > .screen__body {
+  padding-bottom: var(--space-12);
+}
+
+.prose-col {
+  max-width: var(--prose-max);
+}
+
+.side-panel {
+  border-left: 1px solid var(--divider);
+  background: var(--surface-chrome);
+  overflow: auto;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.panel-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-15);
+  font: var(--type-label);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: var(--space-2);
+}
+
+/* Séparateur titré : un libellé, un filet, une aide clavier à droite. */
+.rule-label {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: var(--space-7) 0 var(--space-25);
+}
+.rule-label__text {
+  font: var(--type-label);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.rule-label__line {
+  flex: 1;
+  height: 1px;
+  background: var(--divider);
+}
+.rule-label__hint {
+  font: var(--type-code-sm);
+  color: var(--text-muted);
+}
+
+/* Monogramme de catégorie — le repère visuel le plus répété de l'app. */
+.mono-chip {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 14px;
-  height: 14px;
-  border-radius: 4px;
-  background: var(--cat-accent);
-  color: var(--bg);
-  font-size: 9px;
-  font-weight: 800;
-  font-family: var(--font-mono);
+  flex: none;
+  min-width: 24px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: var(--radius-xs);
+  background: var(--surface-muted);
+  color: var(--text-secondary);
+  font: var(--type-code-sm);
+}
+.mono-chip--sm {
+  min-width: 22px;
+  height: 18px;
+  padding: 0 var(--space-1);
+}
+.mono-chip--lg {
+  min-width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  font: var(--type-code);
 }
 
-.kpis {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: var(--feed-gap);
-  margin: 0;
-  padding: 0;
-}
-.kpis > div {
+/* Ligne de sujet cliquable — briefing, fil, sommaire, palette. */
+.row-card {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  width: 100%;
+  text-align: left;
+  padding: var(--space-3);
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 13px;
-  padding: 16px 18px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-xs);
+  cursor: pointer;
+  color: inherit;
+  transition: var(--transition-control);
 }
-.kpis dt {
-  color: var(--muted);
-  font-family: var(--font-mono);
-  font-size: 0.78rem;
+.row-card:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-hover);
+  text-decoration: none;
+  color: inherit;
+}
+.row-card__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.row-card__title {
+  font: var(--type-body-strong);
+  color: var(--text-primary);
+}
+.row-card__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-15);
+  flex-wrap: wrap;
+  font: var(--type-code-sm);
+  color: var(--text-muted);
+}
+.row-card__aside {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-muted);
+}
+
+.row-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-15);
+}
+
+/* Note discrète en fin de liste (« la routine déduplique sur 30 jours »). */
+.hint-strip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+  padding: var(--space-25) var(--space-3);
+  border: 1px dashed var(--border-default);
+  border-radius: var(--radius-md);
+  font: var(--type-small);
+  color: var(--text-muted);
+}
+
+/* KPI — /stats et /stats-perso. */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: var(--space-3);
+  max-width: var(--content-max);
+}
+
+.kpi {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  padding: var(--pad-card);
+  box-shadow: var(--shadow-xs);
+}
+.kpi-label {
+  font: var(--type-label);
+  letter-spacing: var(--tracking-label);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  margin: 0 0 0.25rem;
+  color: var(--text-muted);
+  margin-bottom: var(--space-15);
 }
-.kpis dd {
-  margin: 0;
-  font-size: 28px;
-  font-weight: 800;
-  letter-spacing: -0.03em;
+.kpi-num {
+  font: var(--weight-semibold) 30px / 34px var(--font-sans);
+  letter-spacing: var(--tracking-display);
   font-variant-numeric: tabular-nums;
-  font-feature-settings: 'tnum';
-  color: var(--text);
+  color: var(--text-primary);
+}
+.kpi-ctx {
+  font: var(--type-caption);
+  color: var(--text-muted);
+  margin-top: var(--space-1);
 }
 
 /* ---------------------------------------------------------------------------
    Markdown — typographie du contenu sanitisé (rendu via bypassSecurityTrustHtml)
    --------------------------------------------------------------------------- */
 .markdown {
-  color: var(--text);
-  /* Les tokens longs (code inline, URLs, identifiants) doivent revenir à la
-     ligne plutôt que forcer une largeur supérieure au conteneur (débordement
-     horizontal sur mobile). */
+  color: var(--text-secondary);
   overflow-wrap: break-word;
 }
 
@@ -310,7 +538,6 @@ hr {
 .markdown h3,
 .markdown h4 {
   line-height: 1.25;
-  font-feature-settings: 'ss01', 'cv01';
 }
 .markdown h1:first-child,
 .markdown h2:first-child,
@@ -320,93 +547,88 @@ hr {
 }
 
 .markdown h1 {
-  font-size: 2.15rem;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  color: var(--text);
-  margin: 1.8em 0 0.5em;
+  font: var(--type-title);
+  letter-spacing: var(--tracking-display);
+  margin: 1.6em 0 0.5em;
 }
 .markdown h2 {
-  font-size: 1.5rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--text);
-  margin: 2.2em 0 0.7em;
+  font: var(--weight-semibold) var(--text-xl) / var(--lh-xl) var(--font-sans);
+  letter-spacing: var(--tracking-heading);
+  margin: 1.9em 0 0.6em;
 }
 .markdown h3 {
-  font-size: 1.18rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  color: var(--brand);
-  margin: 1.9em 0 0.5em;
+  font: var(--type-heading);
+  letter-spacing: var(--tracking-heading);
+  color: var(--text-primary);
+  margin: 1.7em 0 0.5em;
 }
 .markdown h4 {
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: var(--muted);
+  font: var(--type-label);
+  letter-spacing: var(--tracking-label);
+  color: var(--text-muted);
   margin: 1.6em 0 0.45em;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-family: var(--font-mono);
 }
 
 .markdown p {
-  margin: 0.95em 0;
-  color: var(--text);
-  line-height: 1.68;
+  margin: 0.9em 0;
+  font: var(--weight-book) var(--text-base) / 24px var(--font-sans);
+  color: var(--text-secondary);
 }
 
 .markdown ul,
 .markdown ol {
-  margin: 0.95em 0;
-  padding-left: 1.5em;
-  color: var(--text);
+  margin: 0.9em 0;
+  padding-left: 1.4em;
 }
 .markdown li {
-  margin: 0.4em 0;
+  margin: 0.35em 0;
+  font: var(--weight-book) var(--text-base) / 24px var(--font-sans);
 }
 .markdown li::marker {
-  color: var(--brand);
+  color: var(--text-muted);
 }
 .markdown ol li::marker {
-  color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
 
 .markdown blockquote {
-  border-left: 3px solid var(--brand);
-  padding: 0.2em 0 0.2em 1rem;
-  margin: 1.3em 0;
-  color: var(--muted);
-  font-style: italic;
+  border-left: 2px solid var(--border-strong);
+  padding: 0.1em 0 0.1em var(--space-4);
+  margin: 1.2em 0;
+  color: var(--text-muted);
 }
 
 .markdown strong {
-  color: var(--text);
-  font-weight: 600;
+  color: var(--text-primary);
+  font-weight: var(--weight-semibold);
 }
 
 .markdown em {
-  color: var(--muted);
+  color: var(--text-secondary);
   font-style: italic;
 }
 
 .markdown code {
-  color: var(--brand);
-  background: var(--brand-soft);
-  border: 1px solid transparent;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-code);
+  background: var(--surface-muted);
+  border-radius: var(--radius-xs);
+  padding: 0.1em 0.35em;
 }
 
 /* ---- Shiki (build-time, dual light/dark). Sélecteurs INTACTS. ---- */
 .markdown pre.shiki {
-  background: var(--shiki-dark-bg, var(--code-bg));
+  background: var(--shiki-dark-bg, var(--surface-code));
+  border-radius: var(--radius-code);
 }
 .markdown pre.shiki,
 .markdown pre.shiki span {
   color: var(--shiki-dark);
 }
 :root[data-theme='light'] .markdown pre.shiki {
-  background: var(--shiki-light-bg, var(--code-bg));
+  background: var(--shiki-light-bg, var(--surface-code));
 }
 :root[data-theme='light'] .markdown pre.shiki,
 :root[data-theme='light'] .markdown pre.shiki span {
@@ -426,7 +648,7 @@ hr {
   padding: 0.5rem 0;
   text-align: center;
   white-space: pre-wrap;
-  color: var(--muted);
+  color: var(--text-muted);
 }
 .markdown pre.mermaid[data-processed='true'] {
   color: inherit;
@@ -437,40 +659,89 @@ hr {
 }
 
 .markdown a {
-  color: var(--brand);
-  border-bottom: 1px dashed color-mix(in srgb, var(--brand) 50%, transparent);
+  color: var(--text-link);
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 3px;
 }
 .markdown a:hover {
-  border-bottom-style: solid;
-  border-bottom-color: var(--brand);
+  text-decoration-style: solid;
 }
 
 .markdown table {
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   margin: 1.2em 0;
   width: 100%;
-  font-size: 0.92rem;
-  /* Tableaux larges : on les rend scrollables horizontalement au lieu de
-     déborder de la page (pas de wrapper DOM disponible côté markdown). */
+  font-size: var(--text-sm);
+  /* Pas de wrapper DOM côté markdown : on rend la table scrollable elle-même. */
   display: block;
   overflow-x: auto;
 }
 .markdown th,
 .markdown td {
-  border-bottom: 1px solid var(--border);
-  padding: 0.5em 0.75em;
+  border-bottom: 1px solid var(--border-subtle);
+  padding: var(--space-15) var(--space-25);
   text-align: left;
   vertical-align: top;
 }
 .markdown th {
-  color: var(--muted);
+  font: var(--type-label);
+  letter-spacing: var(--tracking-label);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-size: 0.75rem;
-  font-weight: 600;
-  border-bottom: 1px solid var(--border-strong);
-  background: var(--surface-2);
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-default);
+  background: var(--surface-chrome);
+  white-space: nowrap;
 }
 .markdown td {
-  color: var(--text);
+  color: var(--text-secondary);
+}
+
+/* ---------------------------------------------------------------------------
+   Adaptations mobiles du chrome partagé
+   --------------------------------------------------------------------------- */
+@media (max-width: 899.98px) {
+  .screen__split {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Le panneau de contexte passe sous le contenu au lieu de le comprimer. */
+  .side-panel {
+    border-left: 0;
+    border-top: 1px solid var(--divider);
+    overflow: visible;
+  }
+
+  .screen__head,
+  .screen__toolbar {
+    padding-left: var(--space-3);
+    padding-right: var(--space-3);
+  }
+
+  .screen__body {
+    padding: var(--space-4) var(--space-3) var(--space-8);
+  }
+}
+
+@media (max-width: 767.98px) {
+  /* En-tête sur deux rangées : le titre garde toute la largeur, les actions
+     passent dessous plutôt que d'écraser la colonne de texte. */
+  .screen__head {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: var(--space-2) var(--space-3);
+  }
+
+  .screen__actions {
+    grid-column: 1 / -1;
+    flex-wrap: wrap;
+  }
+
+  .kpi-num {
+    font-size: 26px;
+    line-height: 30px;
+  }
 }

@@ -1,0 +1,84 @@
+:host {
+  display: contents;
+}
+
+.fil__count {
+  font: var(--type-code-sm);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.fil__void {
+  font: var(--type-small);
+  color: var(--text-muted);
+  padding: var(--space-6) 0;
+}
+
+.fil__table {
+  max-width: var(--content-max);
+}
+
+.fil__col-mono {
+  width: 44px;
+}
+.fil__col-source {
+  width: 200px;
+}
+.fil__col-date {
+  width: 96px;
+}
+.fil__col-read {
+  width: 88px;
+}
+
+.fil__link {
+  color: var(--text-primary);
+  display: block;
+}
+.fil__link:hover {
+  color: var(--text-link);
+}
+
+.fil__more {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+.fil__more-hint {
+  font: var(--type-code-sm);
+  color: var(--text-muted);
+}
+
+/* Sous 900px, cinq colonnes ne tiennent pas : on garde le repère de thématique,
+   le titre et la date. Source et temps de lecture restent dans le sujet. */
+@media (max-width: 899.98px) {
+  .fil__table thead {
+    display: none;
+  }
+  .fil__table tr {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    column-gap: var(--space-2);
+    row-gap: 2px;
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .fil__table td {
+    border: 0;
+    padding: 0;
+  }
+  .fil__table td:first-child {
+    grid-row: span 2;
+  }
+  .fil__table .fil__col-source,
+  .fil__table .fil__col-read {
+    display: none;
+  }
+  .fil__table .fil__col-date {
+    width: auto;
+    grid-column: 2;
+    text-align: left;
+  }
+}

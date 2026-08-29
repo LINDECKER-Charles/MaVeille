@@ -1,18 +1,23 @@
 import { Routes } from '@angular/router';
 
+/**
+ * Le briefing du jour et la lecture d'un sujet partagent la même route :
+ * `/digest/:date` avec `?sujet=<slug>-<index>`. On garde ainsi un permalien par
+ * sujet sans prérendre une page par sujet.
+ */
+const briefing = () =>
+  import('./features/briefing/briefing-page.component').then((m) => m.BriefingPageComponent);
+
 export const routes: Routes = [
+  { path: '', loadComponent: briefing },
+  { path: 'digest/:date', loadComponent: briefing },
   {
-    path: '',
-    loadComponent: () => import('./features/home/home.component').then((m) => m.HomeComponent)
+    path: 'fil',
+    loadComponent: () => import('./features/fil/fil.component').then((m) => m.FilComponent)
   },
   {
-    path: 'stats',
-    loadComponent: () => import('./features/stats/stats.component').then((m) => m.StatsComponent)
-  },
-  {
-    path: 'stats-perso',
-    loadComponent: () =>
-      import('./features/stats-perso/stats-perso.component').then((m) => m.StatsPersoComponent)
+    path: 'jours',
+    loadComponent: () => import('./features/jours/jours.component').then((m) => m.JoursComponent)
   },
   {
     path: 'rapports',
@@ -25,9 +30,13 @@ export const routes: Routes = [
       import('./features/rapports/rapport-detail.component').then((m) => m.RapportDetailComponent)
   },
   {
-    path: 'digest/:date',
+    path: 'stats',
+    loadComponent: () => import('./features/stats/stats.component').then((m) => m.StatsComponent)
+  },
+  {
+    path: 'stats-perso',
     loadComponent: () =>
-      import('./features/digest/digest-page.component').then((m) => m.DigestPageComponent)
+      import('./features/stats-perso/stats-perso.component').then((m) => m.StatsPersoComponent)
   },
   { path: '**', redirectTo: '' }
 ];

@@ -1,0 +1,13 @@
+/* Établi — rayons serrés. Usiné, pas moelleux : rien au-dessus de 12px sauf les pilules. */
+:root {
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-pill: 999px;
+  --radius-control: var(--radius-sm);
+  --radius-card: var(--radius-lg);
+  --radius-overlay: var(--radius-lg);
+  --radius-code: var(--radius-md);
+}

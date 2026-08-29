@@ -3,14 +3,6 @@ import type { SearchHit, SearchIndexEntry } from '../data/types';
 
 const SNIPPET_RADIUS = 80;
 
-/** Scope filter applied on top of the textual ranking. */
-export interface SearchScope {
-  /** Restrict to a single category (`scope`), or null/undefined for all. */
-  category?: string | null;
-  /** Restrict to one entry type, or null/undefined for both. */
-  type?: 'synthese' | 'detail' | null;
-}
-
 function escapeHtml(s: string): string {
   return s
     .replace(/&/g, '&amp;')
@@ -89,33 +81,12 @@ export class SearchService {
     return this.loading;
   }
 
-  /** Ranked search, optionally constrained by a category/type scope. */
-  async search(query: string, scope?: SearchScope): Promise<SearchHit[]> {
+  /** Recherche plein texte classée, sur l'index chargé à la demande. */
+  async search(query: string): Promise<SearchHit[]> {
     const trimmed = query.trim();
     if (trimmed.length < 2) return [];
     const index = await this.ensureIndex();
-    return SearchService.run(index, trimmed, scope);
-  }
-
-  /** Browse-by-scope with no text query: lists matching entries, newest first. */
-  async browse(scope: SearchScope): Promise<SearchHit[]> {
-    const index = await this.ensureIndex();
-    return SearchService.list(index, scope);
-  }
-
-  /** Pure scope listing (no query) — extracted for testability. */
-  static list(index: readonly SearchIndexEntry[], scope: SearchScope): SearchHit[] {
-    const cat = scope.category ?? null;
-    const type = scope.type ?? null;
-    if (!cat && !type) return [];
-    const hits: SearchHit[] = [];
-    for (const e of index) {
-      if (cat && e.scope !== cat) continue;
-      if (type && e.type !== type) continue;
-      const preview = e.text.slice(0, 160);
-      hits.push({ date: e.date, scope: e.scope, type: e.type, snippet: preview, score: 0 });
-    }
-    return hits.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+    return SearchService.run(index, trimmed);
   }
 
   /**
@@ -125,24 +96,13 @@ export class SearchService {
    *   + 10 if the first hit lands in the entry title (leading line)
    *   +  3 when the hit appears in a `synthese` (higher-signal summary)
    *   +  position bonus `(1000 - first) / 1000` favouring early matches.
-   * An optional `scope` filters by category and/or type before scoring.
    */
-  static run(
-    index: readonly SearchIndexEntry[],
-    query: string,
-    scope?: SearchScope
-  ): SearchHit[] {
+  static run(index: readonly SearchIndexEntry[], query: string): SearchHit[] {
     const trimmed = query.trim();
     if (trimmed.length < 2) return [];
 
-    const cat = scope?.category ?? null;
-    const type = scope?.type ?? null;
-
     const hits: SearchHit[] = [];
     for (const e of index) {
-      if (cat && e.scope !== cat) continue;
-      if (type && e.type !== type) continue;
-
       const { snippet, count, first } = buildSnippet(e.text, trimmed);
       if (count === 0) continue;
 

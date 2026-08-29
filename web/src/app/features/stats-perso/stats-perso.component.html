@@ -1,121 +1,125 @@
-<header class="page-head">
-  <h1>Mes stats</h1>
-  <p class="sub">Suivi personnel des digests marqués comme lus.</p>
-</header>
-
-<section aria-labelledby="kpi-heading">
-  <h2 id="kpi-heading" class="visually-hidden">Indicateurs clés</h2>
-  <div class="kpi-grid">
-    <article class="kpi">
-      <span class="kpi-num">{{ readCount() }}<span class="kpi-den"> / {{ total }}</span></span>
-      <span class="kpi-label">Digests lus</span>
-      <span class="kpi-ctx">sur l'ensemble du fil</span>
-    </article>
-
-    <article class="kpi">
-      <span class="kpi-num">{{ progressPct() }}%</span>
-      <span class="kpi-label">Progression</span>
-      <span class="kpi-ctx">part du fil parcourue</span>
-    </article>
-
-    <article class="kpi">
-      <span class="kpi-num">{{ total - readCount() }}</span>
-      <span class="kpi-label">Restants</span>
-      <span class="kpi-ctx">non encore cochés</span>
-    </article>
-
-    <article class="kpi">
-      @if (latestRead(); as last) {
-        <span class="kpi-num kpi-date">{{ last.date | frDate: 'short' }}</span>
-        <span class="kpi-label">Dernier lu</span>
-        <span class="kpi-ctx">{{ last.date | frDate: 'relative' }}</span>
-      } @else {
-        <span class="kpi-num kpi-date">—</span>
-        <span class="kpi-label">Dernier lu</span>
-        <span class="kpi-ctx">aucune lecture</span>
-      }
-    </article>
-  </div>
-</section>
-
-@if (readCount() === 0) {
-  <section class="block empty-state" aria-labelledby="empty-heading">
-    <h2 id="empty-heading">Rien à afficher pour l'instant</h2>
-    <p>
-      Aucun digest n'est encore marqué comme lu. Cochez la case&nbsp;✓ sur les cartes du fil
-      pour suivre votre lecture ici.
-    </p>
-    <a class="cta" routerLink="/">Parcourir le fil →</a>
-  </section>
-} @else {
-  <section class="block" aria-labelledby="effort-heading">
-    <header class="block-head row">
-      <div>
-        <h2 id="effort-heading">Que lis-je le plus&nbsp;?</h2>
-        <p>Répartition des digests lus par catégorie.</p>
-      </div>
-      <button type="button" class="reset" (click)="reset()">Réinitialiser</button>
-    </header>
-
-    <div class="effort">
-      <div class="effort-donut">
-        <app-donut [segments]="categorySegments()" centerLabel="lus" />
-      </div>
-      <div class="effort-bars">
-        <app-bar-chart [data]="categoryBars()" unit="lus" />
-        <ul class="legend" aria-label="Légende des catégories">
-          @for (c of categoryLegend(); track c.label) {
-            <li>
-              <span class="legend-dot" [style.background]="c.accent" aria-hidden="true"></span>
-              <span>{{ c.label }}</span>
-            </li>
-          }
-        </ul>
+<div class="screen">
+  <div class="screen__head">
+    <span class="screen__glyph"><app-icon name="check" [size]="17" /></span>
+    <div class="screen__heading">
+      <h1 class="screen__title">Ma lecture</h1>
+      <div class="screen__sub">
+        Suivi local : l'état de lecture vit dans ce navigateur et n'est jamais envoyé.
       </div>
     </div>
-  </section>
+    <div class="screen__actions">
+      <app-button size="sm" variant="ghost" iconLeft="refresh-cw" (click)="reset()">
+        Réinitialiser
+      </app-button>
+    </div>
+  </div>
 
-  <section class="block" aria-labelledby="heatmap-heading">
-    <header class="block-head">
-      <h2 id="heatmap-heading">Quand ai-je lu&nbsp;?</h2>
-      <p>26 dernières semaines · sujets des digests lus</p>
-    </header>
-    <app-heatmap [activity]="readActivity()" [weeks]="26" />
-  </section>
+  <div class="screen__body">
+    <section class="kpi-grid" aria-labelledby="kpi-heading">
+      <h2 id="kpi-heading" class="visually-hidden">Indicateurs clés</h2>
+      <div class="kpi">
+        <div class="kpi-label">Digests lus</div>
+        <div class="kpi-num">{{ readCount() }}<span class="kpi-den"> / {{ total }}</span></div>
+        <div class="kpi-ctx">sur l'ensemble du fil</div>
+      </div>
 
-  <section class="block" aria-labelledby="list-heading">
-    <header class="block-head">
-      <h2 id="list-heading">Mes digests lus</h2>
-      <p>{{ readCount() }} digest{{ readCount() > 1 ? 's' : '' }}, du plus récent au plus ancien.</p>
-    </header>
+      <div class="kpi">
+        <div class="kpi-label">Progression</div>
+        <div class="kpi-num">{{ progressPct() }}%</div>
+        <div class="kpi-ctx">part du fil parcourue</div>
+      </div>
 
-    <ul class="read-list" role="list">
-      @for (d of readDigests(); track d.date) {
-        <li class="read-item" [style.--cat-accent]="store.accentFor(d.categories[0] || '')">
-          <a class="read-link" [routerLink]="['/digest', d.date]">
-            <span class="read-date">{{ d.date | frDate }}</span>
-            <span class="read-cats">
-              @for (cat of d.categories; track cat) {
-                <span class="cat-badge" [style.--cat-accent]="store.accentFor(cat)" [style.--cat-soft]="store.softFor(cat)">
-                  <span class="mono" aria-hidden="true">{{ store.monogramFor(cat) }}</span>
-                  {{ store.labelFor(cat) }}
-                </span>
+      <div class="kpi">
+        <div class="kpi-label">Restants</div>
+        <div class="kpi-num">{{ total - readCount() }}</div>
+        <div class="kpi-ctx">pas encore cochés</div>
+      </div>
+
+      <div class="kpi">
+        <div class="kpi-label">Dernier lu</div>
+        @if (latestRead(); as last) {
+          <div class="kpi-num kpi-num--date">{{ last.date | frDate: 'short' }}</div>
+          <div class="kpi-ctx">{{ last.date | frDate: 'relative' }}</div>
+        } @else {
+          <div class="kpi-num kpi-num--date">—</div>
+          <div class="kpi-ctx">aucune lecture enregistrée</div>
+        }
+      </div>
+    </section>
+
+    @if (readCount() === 0) {
+      <div class="empty-state etb-empty">
+        <span class="etb-empty__icon"><app-icon name="book-open" [size]="20" /></span>
+        <h2 class="etb-empty__title">Rien à afficher pour l'instant</h2>
+        <p class="etb-empty__desc">
+          Aucun digest n'est marqué comme lu. Coche « Marquer comme lu » depuis un briefing : le
+          jour apparaîtra ici, avec ta répartition par thématique.
+        </p>
+        <a class="cta etb-btn etb-btn--primary etb-btn--sm" routerLink="/">
+          Parcourir le fil
+          <app-icon name="arrow-right" [size]="14" />
+        </a>
+      </div>
+    } @else {
+      <div class="panels">
+        <app-panel [title]="'Ce que je lis'" icon="hash">
+          <span actions class="panel-note">répartition des lus par thématique</span>
+          <div class="pbody charts">
+            <div class="charts__donut">
+              <app-donut [segments]="categorySegments()" centerLabel="lus" />
+            </div>
+            <div class="charts__bars">
+              <app-bar-chart [data]="categoryBars()" unit="lus" />
+            </div>
+          </div>
+        </app-panel>
+
+        <app-panel [title]="'Rythme de lecture'" icon="clock">
+          <span actions class="panel-note">{{ heatmapWeeks }} dernières semaines</span>
+          <div class="pbody">
+            <app-heatmap [activity]="readActivity()" [weeks]="heatmapWeeks" />
+          </div>
+        </app-panel>
+
+        <app-panel [title]="'Digests lus'" icon="list">
+          <span actions class="panel-note">
+            {{ readCount() }} jour{{ readCount() > 1 ? 's' : '' }} · du plus récent au plus ancien
+          </span>
+          <div class="pbody">
+            <ul class="read-list row-list" role="list">
+              @for (r of rows(); track r.date) {
+                <li class="read-item row-card">
+                  <span class="read-monos">{{ r.monos }}</span>
+                  <span class="row-card__main">
+                    <a class="read-link row-card__title" [routerLink]="['/digest', r.date]">
+                      {{ r.title }}
+                    </a>
+                    <span class="row-card__meta">{{ r.meta }}</span>
+                  </span>
+                  <span class="row-card__aside">
+                    <button
+                      type="button"
+                      class="unread etb-btn etb-btn--ghost etb-btn--sm"
+                      [attr.aria-label]="r.unreadLabel"
+                      (click)="toggleRead(r.date)"
+                    >
+                      Non lu
+                    </button>
+                  </span>
+                </li>
               }
-            </span>
-            <span class="read-meta" aria-hidden="true">
-              {{ d.totalSubjects }} sujet{{ d.totalSubjects > 1 ? 's' : '' }} →
-            </span>
-          </a>
-          <button
-            type="button"
-            class="unread"
-            (click)="toggleRead(d.date)"
-            [attr.aria-label]="'Marquer comme non lu — digest du ' + (d.date | frDate)"
-          >
-            Non lu
-          </button>
-        </li>
-      }
-    </ul>
-  </section>
-}
+            </ul>
+          </div>
+        </app-panel>
+
+        <div class="hint-strip">
+          <app-icon name="info" [size]="14" />
+          <span>
+            L'état de lecture tient dans le stockage local de ce navigateur : le vider remet le
+            suivi à zéro, et rien ne circule d'un appareil à l'autre.
+          </span>
+        </div>
+      </div>
+    }
+  </div>
+</div>

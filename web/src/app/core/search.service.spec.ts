@@ -39,39 +39,4 @@ describe('SearchService.run', () => {
     expect(hits[0].snippet).toContain('&lt;script&gt;');
     expect(hits[0].snippet).not.toContain('<script>');
   });
-
-  it('filters by category scope', () => {
-    const hits = SearchService.run(INDEX, 'angular', { category: 'IA' });
-    expect(hits.length).toBe(1);
-    expect(hits[0].scope).toBe('IA');
-  });
-
-  it('filters by type scope', () => {
-    const hits = SearchService.run(INDEX, 'angular', { type: 'detail' });
-    expect(hits.length).toBe(1);
-    expect(hits[0].type).toBe('detail');
-  });
-
-  it('treats null scope fields as no filter', () => {
-    const hits = SearchService.run(INDEX, 'angular', { category: null, type: null });
-    expect(hits.length).toBe(2);
-  });
-});
-
-describe('SearchService.list', () => {
-  it('returns nothing without any scope', () => {
-    expect(SearchService.list(INDEX, {})).toEqual([]);
-  });
-
-  it('lists entries for a category scope, newest first', () => {
-    const hits = SearchService.list(INDEX, { category: 'Angular' });
-    expect(hits.length).toBe(1);
-    expect(hits[0].scope).toBe('Angular');
-  });
-
-  it('lists entries for a type scope', () => {
-    const hits = SearchService.list(INDEX, { type: 'synthese' });
-    expect(hits.length).toBe(2);
-    expect(hits.every((h) => h.type === 'synthese')).toBeTrue();
-  });
 });
