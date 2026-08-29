@@ -2,6 +2,12 @@
 
 > Diagnostic généré dans le cadre de la migration front Svelte → Angular + refonte CI/CD.
 > Section **AVANT** = état au démarrage du chantier. Section **APRÈS** = à compléter en fin de chantier.
+>
+> **⚠️ Document daté.** Les correspondances de composants ci-dessous décrivent l'app telle
+> qu'elle sortait de la migration. La refonte « Établi » a depuis remplacé `HomeComponent`,
+> `SearchBoxComponent`, `DigestCardComponent`, `DigestPageComponent`, `DigestTabsComponent`
+> et `DetailSnippetComponent` par `features/briefing/`, `features/fil/` et `features/jours/`.
+> L'inventaire à jour est dans [`../web/README.md`](../web/README.md).
 
 ---
 
