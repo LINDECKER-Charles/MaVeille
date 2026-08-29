@@ -1,17 +1,25 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { Title } from '@angular/platform-browser';
+import { PageMetaService } from '../../core/page-meta.service';
 import { DigestStore } from '../../core/digest-store.service';
 import { ReadStateService } from '../../core/read-state.service';
 import { FrDatePipe } from '../../core/date.pipe';
+import { formatDateFull, relativeDay } from '../../core/date.util';
 import type { DayActivity, DigestMeta } from '../../data/types';
 import { HeatmapComponent } from '../../shared/heatmap.component';
 import { BarChartComponent, BarSeries } from '../../shared/bar-chart.component';
 import { DonutComponent, DonutSegment } from '../../shared/donut.component';
+import { ButtonComponent } from '../../ui/button.component';
+import { IconComponent } from '../../ui/icon.component';
+import { PanelComponent } from '../../ui/panel.component';
 
-interface CategoryLegendItem {
-  readonly label: string;
-  readonly accent: string;
+/** Une ligne de la liste des digests lus, mise en forme une fois pour toutes. */
+interface ReadRow {
+  readonly date: string;
+  readonly title: string;
+  readonly monos: string;
+  readonly meta: string;
+  readonly unreadLabel: string;
 }
 
 /**
@@ -24,20 +32,31 @@ interface CategoryLegendItem {
   selector: 'app-stats-perso',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, FrDatePipe, HeatmapComponent, BarChartComponent, DonutComponent],
+  imports: [
+    RouterLink,
+    FrDatePipe,
+    HeatmapComponent,
+    BarChartComponent,
+    DonutComponent,
+    ButtonComponent,
+    IconComponent,
+    PanelComponent
+  ],
   templateUrl: './stats-perso.component.html',
   styleUrl: './stats-perso.component.css'
 })
-export class StatsPersoComponent implements OnInit {
-  readonly store = inject(DigestStore);
+export class StatsPersoComponent {
+  private readonly store = inject(DigestStore);
   private readonly readState = inject(ReadStateService);
-  private readonly title = inject(Title);
 
   /** Digests marqués lus, du plus récent au plus ancien (digests déjà triés). */
   readonly readDigests = computed<DigestMeta[]>(() => {
     const ids = this.readState.ids();
     return this.store.digests.filter((d) => ids.has(d.date));
   });
+
+  /** Fenêtre de la heatmap — la légende et le composant lisent la même valeur. */
+  protected readonly heatmapWeeks = 26;
 
   readonly total = this.store.digests.length;
   readonly readCount = computed(() => this.readDigests().length);
@@ -59,7 +78,7 @@ export class StatsPersoComponent implements OnInit {
       .sort((a, b) => b.count - a.count);
   });
 
-  readonly categorySegments = computed<DonutSegment[]>(() =>
+  protected readonly categorySegments = computed<DonutSegment[]>(() =>
     this.categoryCounts().map((c) => ({
       label: this.store.labelFor(c.category),
       value: c.count,
@@ -67,7 +86,7 @@ export class StatsPersoComponent implements OnInit {
     }))
   );
 
-  readonly categoryBars = computed<BarSeries[]>(() =>
+  protected readonly categoryBars = computed<BarSeries[]>(() =>
     this.categoryCounts().map((c) => ({
       label: this.store.labelFor(c.category),
       value: c.count,
@@ -76,15 +95,8 @@ export class StatsPersoComponent implements OnInit {
     }))
   );
 
-  readonly categoryLegend = computed<CategoryLegendItem[]>(() =>
-    this.categoryCounts().map((c) => ({
-      label: this.store.labelFor(c.category),
-      accent: this.store.accentFor(c.category)
-    }))
-  );
-
   // --- Heatmap des lectures (sujets du digest lu, sinon 0) ------------------
-  readonly readActivity = computed<DayActivity[]>(() =>
+  protected readonly readActivity = computed<DayActivity[]>(() =>
     this.readDigests().map((d) => ({
       date: d.date,
       subjects: d.totalSubjects,
@@ -92,8 +104,28 @@ export class StatsPersoComponent implements OnInit {
     }))
   );
 
-  ngOnInit(): void {
-    this.title.setTitle('Veille — Mes stats');
+  /** Modèle de la liste : le gabarit de ligne est figé ici, pas dans le template. */
+  protected readonly rows = computed<ReadRow[]>(() =>
+    this.readDigests().map((d) => {
+      const title = formatDateFull(d.date);
+      return {
+        date: d.date,
+        title,
+        monos: d.categories.map((c) => this.store.monogramFor(c)).join(' '),
+        meta:
+          `${d.totalSubjects} sujet${d.totalSubjects > 1 ? 's' : ''} · ` +
+          `${d.totalSources} source${d.totalSources > 1 ? 's' : ''} · ` +
+          `lecture ~${d.readingMinutes} min · ${relativeDay(d.date)}`,
+        unreadLabel: `Marquer comme non lu — digest du ${title}`
+      };
+    })
+  );
+
+  constructor() {
+    inject(PageMetaService).set(
+      'Ma lecture',
+      'Ce que tu as déjà lu de la veille : progression, rythme et répartition par thématique, suivis en local.'
+    );
   }
 
   toggleRead(date: string): void {

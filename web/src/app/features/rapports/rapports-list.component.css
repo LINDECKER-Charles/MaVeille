@@ -1,0 +1,80 @@
+:host {
+  display: contents;
+}
+
+.reports {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  /* `min()` borne la piste à la largeur disponible : à 320px, la carte se réduit
+     au lieu de pousser la page en défilement horizontal. */
+  grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr));
+  gap: var(--space-3);
+  max-width: var(--content-max);
+}
+
+/* La cellule étire la carte : toutes les cartes d'une rangée ont la même hauteur,
+   et leur pied reste aligné grâce au `margin-top: auto` de `.report__foot`. */
+.reports__cell {
+  display: flex;
+  min-width: 0;
+}
+
+.report {
+  flex: 1;
+  min-width: 0;
+  gap: var(--space-25);
+  padding: var(--pad-card);
+  color: var(--text-secondary);
+}
+.report:hover {
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+
+.report__stamp {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-15);
+}
+
+.report__range {
+  font: var(--type-code-sm);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.report__title {
+  font: var(--type-subheading);
+  color: var(--text-primary);
+}
+
+.report__excerpt {
+  font: var(--type-caption);
+  color: var(--text-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.report__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: auto;
+  padding-top: var(--space-1);
+}
+
+.report__count {
+  font: var(--type-code-sm);
+  color: var(--text-muted);
+}
+
+.report__cta {
+  flex: none;
+}

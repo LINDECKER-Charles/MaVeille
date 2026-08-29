@@ -1,190 +1,131 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { Title } from '@angular/platform-browser';
+import { PageMetaService } from '../../core/page-meta.service';
 import { DigestStore } from '../../core/digest-store.service';
+import { parseIso, toIso } from '../../core/date.util';
+import { BadgeComponent } from '../../ui/badge.component';
+import { IconComponent } from '../../ui/icon.component';
 import type { WeeklyReport } from '../../data/types';
 
+/** Une carte de la grille : tout est mis en forme ici pour garder le template plat. */
+interface ReportCard {
+  readonly id: string;
+  readonly title: string;
+  readonly range: string;
+  readonly excerpt: string;
+  readonly subjects: string;
+  readonly current: boolean;
+}
+
+/** L'index des rapports hebdomadaires, du plus récent au plus ancien. */
 @Component({
   selector: 'app-rapports-list',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink],
+  imports: [RouterLink, BadgeComponent, IconComponent],
+  styleUrl: './rapports-list.component.css',
   template: `
-    <header class="page-head">
-      <p class="eyebrow">Rapports hebdo</p>
-      <h1>Rapports hebdomadaires</h1>
-      <p class="sub">Synthèses transversales par semaine ISO (du lundi au dimanche).</p>
-    </header>
+    <div class="screen">
+      <div class="screen__head">
+        <span class="screen__glyph"><app-icon name="folder" [size]="17" /></span>
+        <div class="screen__heading">
+          <h1 class="screen__title">Rapports hebdomadaires</h1>
+          <div class="screen__sub">
+            Synthèses transversales par semaine ISO, du lundi au dimanche.
+          </div>
+        </div>
+      </div>
 
-    @if (weeklies.length === 0) {
-      <p class="empty">Aucun rapport disponible pour le moment.</p>
-    } @else {
-      <ul class="reports" aria-label="Liste des rapports">
-        @for (w of weeklies; track w.id) {
-          <li>
-            <a class="card" [routerLink]="['/rapports', w.id]">
-              <div class="card-meta">
-                <span class="id">{{ w.id }}</span>
-                @if (w.rangeStart && w.rangeEnd) {
-                  <span class="range">{{ frRange(w.rangeStart, w.rangeEnd) }}</span>
-                } @else if (w.range) {
-                  <span class="range">{{ w.range }}</span>
-                }
-                @if (w.id === currentId()) {
-                  <span class="badge-current">EN COURS</span>
-                }
-              </div>
-              <span class="title">{{ w.title }}</span>
-            </a>
-          </li>
+      <div class="screen__body">
+        @if (cards().length) {
+          <ul class="reports" aria-label="Rapports hebdomadaires, du plus récent au plus ancien">
+            @for (c of cards(); track c.id) {
+              <li class="reports__cell">
+                <a class="etb-card etb-card--interactive report" [routerLink]="['/rapports', c.id]">
+                  <span class="report__stamp">
+                    <app-badge size="sm" [mono]="true" tone="info">{{ c.id }}</app-badge>
+                    @if (c.range) {
+                      <span class="report__range">{{ c.range }}</span>
+                    }
+                    @if (c.current) {
+                      <app-badge size="sm" tone="brand">En cours</app-badge>
+                    }
+                  </span>
+
+                  <span class="report__title">{{ c.title }}</span>
+
+                  @if (c.excerpt) {
+                    <span class="report__excerpt">{{ c.excerpt }}</span>
+                  }
+
+                  <span class="report__foot">
+                    <span class="report__count">{{ c.subjects }}</span>
+                    <span class="etb-btn etb-btn--secondary etb-btn--sm report__cta">
+                      Lire
+                      <app-icon name="arrow-right" [size]="14" />
+                    </span>
+                  </span>
+                </a>
+              </li>
+            }
+          </ul>
+        } @else {
+          <div class="etb-empty">
+            <span class="etb-empty__icon"><app-icon name="folder" [size]="18" /></span>
+            <p class="etb-empty__title">Aucun rapport pour le moment</p>
+            <p class="etb-empty__desc">
+              La première synthèse paraîtra à la clôture de la semaine ISO en cours.
+            </p>
+          </div>
         }
-      </ul>
-    }
-  `,
-  styles: [
-    `
-      :host {
-        display: block;
-        max-width: 1080px;
-        margin: 0 auto;
-        padding: 32px 24px 80px;
-      }
-      @media (max-width: 600px) {
-        :host { padding: 24px 16px 64px; }
-      }
-      .page-head {
-        margin-bottom: 2rem;
-      }
-      .eyebrow {
-        margin: 0 0 0.5rem;
-        font-family: var(--font-mono);
-        font-size: 12px;
-        font-weight: 500;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        color: var(--faint, var(--text-dim));
-      }
-      .page-head h1 {
-        margin: 0 0 0.4rem;
-        font-size: 2rem;
-        font-weight: 800;
-        letter-spacing: -0.02em;
-      }
-      .sub {
-        margin: 0;
-        color: var(--muted, var(--text-muted));
-      }
-      .empty {
-        color: var(--faint, var(--text-dim));
-        padding: 3rem 0;
-        text-align: center;
-      }
-      .reports {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-        display: flex;
-        flex-direction: column;
-        gap: var(--feed-gap, 0.8rem);
-      }
-      .card {
-        display: flex;
-        flex-direction: column;
-        gap: 0.55rem;
-        padding: var(--card-pad, 1.1rem) 1.25rem;
-        background: var(--surface, var(--bg-elevated));
-        border: 1px solid var(--border);
-        border-radius: 14px;
-        color: var(--text);
-        transition: border-color 0.14s ease, transform 0.14s ease, box-shadow 0.14s ease;
-      }
-      .card:hover,
-      .card:focus-visible {
-        border-color: var(--border-strong, var(--accent));
-        transform: translateY(-2px);
-        box-shadow: var(--shadow);
-        outline: none;
-      }
-      .card:focus-visible {
-        outline: 2px solid var(--brand, var(--accent));
-        outline-offset: 2px;
-      }
-      .card-meta {
-        display: flex;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 0.6rem;
-      }
-      .id {
-        font-family: var(--font-mono);
-        font-size: 12px;
-        font-weight: 600;
-        color: var(--brand, var(--accent));
-        background: var(--brand-soft, var(--accent-soft));
-        border-radius: 999px;
-        padding: 2px 9px;
-        font-variant-numeric: tabular-nums;
-        white-space: nowrap;
-      }
-      .range {
-        font-family: var(--font-mono);
-        font-size: 12px;
-        color: var(--faint, var(--text-dim));
-        font-variant-numeric: tabular-nums;
-      }
-      .badge-current {
-        font-family: var(--font-mono);
-        font-size: 10.5px;
-        font-weight: 700;
-        letter-spacing: 0.04em;
-        color: var(--high, var(--accent));
-        border: 1px solid var(--high, var(--accent));
-        border-radius: 999px;
-        padding: 1px 8px;
-      }
-      .title {
-        font-weight: 600;
-        font-size: 1.05rem;
-        letter-spacing: -0.01em;
-      }
-      @media (prefers-reduced-motion: reduce) {
-        .card {
-          transition: none !important;
-        }
-        .card:hover,
-        .card:focus-visible {
-          transform: none;
-        }
-      }
-    `
-  ]
+      </div>
+    </div>
+  `
 })
-export class RapportsListComponent implements OnInit {
+export class RapportsListComponent {
   private readonly store = inject(DigestStore);
-  private readonly title = inject(Title);
-  readonly weeklies = this.store.weeklies;
 
-  /** Id of the in-progress week: current ISO week if present, else the latest still-open report. */
-  readonly currentId = computed(() => resolveCurrentWeekId(this.weeklies));
+  protected readonly cards = computed<ReportCard[]>(() => {
+    const current = resolveCurrentWeekId(this.store.weeklies);
+    return this.store.weeklies.map((w) => ({
+      id: w.id,
+      title: w.title,
+      range: rangeLabel(w),
+      excerpt: w.excerpt ?? '',
+      subjects: subjectsLabel(w),
+      current: w.id === current
+    }));
+  });
 
-  frRange(start: string, end: string): string {
-    return formatFrRange(start, end);
-  }
-
-  ngOnInit(): void {
-    this.title.setTitle('Veille — Rapports hebdomadaires');
+  constructor() {
+    inject(PageMetaService).set(
+      'Rapports hebdomadaires',
+      'Les synthèses hebdomadaires de la veille : une par semaine ISO, du lundi au dimanche.'
+    );
   }
 }
 
+/** Plage couverte : dérivée de l'id ISO au build, `range` ne sert que de filet. */
+function rangeLabel(w: WeeklyReport): string {
+  if (w.rangeStart && w.rangeEnd) return formatFrRange(w.rangeStart, w.rangeEnd);
+  return w.range ?? '';
+}
+
+/** Nombre de sujets couverts — la distribution manque sur les plus vieux rapports. */
+function subjectsLabel(w: WeeklyReport): string {
+  const total = w.distribution?.reduce((sum, d) => sum + d.count, 0) ?? 0;
+  if (total === 0) return '';
+  return `${total} sujet${total > 1 ? 's' : ''} couvert${total > 1 ? 's' : ''}`;
+}
+
 /**
- * "EN COURS" = the report covering the current ISO week (id match). If no report
- * matches today's ISO week, fall back to the most recent report whose covered
- * range has not ended yet (rangeEnd >= today) — pragmatic for reports authored
- * mid-week.
+ * « En cours » = le rapport qui couvre la semaine ISO courante (id identique).
+ * Faute de correspondance, on retient le plus récent dont la plage n'est pas
+ * close (rangeEnd >= aujourd'hui) — cas des rapports écrits en milieu de semaine.
  */
 export function resolveCurrentWeekId(weeklies: readonly WeeklyReport[]): string | null {
   if (weeklies.length === 0) return null;
-  const today = isoToday();
+  const today = toIso(new Date());
   const nowWeek = currentIsoWeekId();
   if (weeklies.some((w) => w.id === nowWeek)) return nowWeek;
 
@@ -195,34 +136,23 @@ export function resolveCurrentWeekId(weeklies: readonly WeeklyReport[]): string 
   return best?.id ?? null;
 }
 
-function isoToday(): string {
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = `${now.getMonth() + 1}`.padStart(2, '0');
-  const d = `${now.getDate()}`.padStart(2, '0');
-  return `${y}-${m}-${d}`;
-}
 
-/** Current ISO-8601 week id, e.g. "2026-W25". */
+/** Id de semaine ISO-8601 courante, ex. « 2026-W25 ». */
 function currentIsoWeekId(): string {
   const d = new Date();
-  // ISO week: Thursday-anchored. Work in UTC to avoid DST drift.
+  // Semaine ISO : ancrée sur le jeudi. On calcule en UTC pour éviter la dérive DST.
   const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-  const day = date.getUTCDay() || 7; // Mon=1..Sun=7
+  const day = date.getUTCDay() || 7; // lun=1..dim=7
   date.setUTCDate(date.getUTCDate() + 4 - day);
   const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
   const week = Math.ceil(((date.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7);
   return `${date.getUTCFullYear()}-W${`${week}`.padStart(2, '0')}`;
 }
 
-/** "16 – 20 juin 2026" — collapses shared month/year. */
+/** « 16 – 20 juin 2026 » — le mois et l'année communs ne sont écrits qu'une fois. */
 export function formatFrRange(startIso: string, endIso: string): string {
-  return formatFrRangeImpl(startIso, endIso);
-}
-
-function formatFrRangeImpl(startIso: string, endIso: string): string {
-  const start = parseLocal(startIso);
-  const end = parseLocal(endIso);
+  const start = parseIso(startIso);
+  const end = parseIso(endIso);
   const month = new Intl.DateTimeFormat('fr-FR', { month: 'long' });
   const sameMonth = start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear();
   const endLabel = `${end.getDate()} ${month.format(end)} ${end.getFullYear()}`;
@@ -234,7 +164,3 @@ function formatFrRangeImpl(startIso: string, endIso: string): string {
   return `${startLabel} – ${endLabel}`;
 }
 
-function parseLocal(iso: string): Date {
-  const [y, m, d] = iso.split('-').map(Number);
-  return new Date(y, m - 1, d);
-}

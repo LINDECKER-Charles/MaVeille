@@ -2,14 +2,11 @@ import { Injectable } from '@angular/core';
 import {
   digests,
   stats,
-  totals,
   categoryRegistry,
-  weeklies,
-  briefing
+  weeklies
 } from '../data/generated/index';
-import { digestLoaders } from '../data/generated/loaders';
+import { digestLoaders, weeklyLoaders } from '../data/generated/loaders';
 import type {
-  Briefing,
   CategoryRegistryEntry,
   DigestMeta,
   OverallStats,
@@ -28,10 +25,8 @@ const KNOWN_SLUGS = new Set(['angular', 'csharp', 'ia', 'tech']);
 export class DigestStore {
   readonly digests: DigestMeta[] = digests;
   readonly stats: OverallStats = stats;
-  readonly totals = totals;
   readonly registry: CategoryRegistryEntry[] = categoryRegistry;
   readonly weeklies: WeeklyReport[] = weeklies;
-  readonly briefing: Briefing | null = briefing;
 
   private readonly registryByName = new Map(this.registry.map((c) => [c.name, c]));
 
@@ -41,7 +36,9 @@ export class DigestStore {
   }
 
   hasDigest(date: string): boolean {
-    return date in digestLoaders;
+    // `in` remonte la chaîne de prototypes : `'constructor' in {}` vaut vrai, et
+    // /digest/constructor rendait alors une page vide au lieu de rediriger.
+    return Object.hasOwn(digestLoaders, date);
   }
 
   /** Lazily load the rendered content for a date. Resolves null if unknown. */
@@ -52,9 +49,6 @@ export class DigestStore {
     return mod.default;
   }
 
-  registryFor(name: string): CategoryRegistryEntry | undefined {
-    return this.registryByName.get(name);
-  }
 
   /** Registry slug, falling back to a derived lowercase-alnum slug. */
   slugFor(name: string): string {
@@ -83,15 +77,6 @@ export class DigestStore {
     return this.registryByName.get(name)?.accent ?? 'var(--accent)';
   }
 
-  /**
-   * Soft/translucent accent: the `--cat-<slug>-soft` token for first-class
-   * categories, otherwise a transparent mix of the resolved accent.
-   */
-  softFor(name: string): string {
-    const slug = this.slugFor(name);
-    if (KNOWN_SLUGS.has(slug)) return `var(--cat-${slug}-soft)`;
-    return `color-mix(in srgb, ${this.accentFor(name)} 16%, transparent)`;
-  }
 
   labelFor(name: string): string {
     return this.registryByName.get(name)?.label ?? name;
@@ -99,5 +84,16 @@ export class DigestStore {
 
   weekly(id: string): WeeklyReport | undefined {
     return this.weeklies.find((w) => w.id === id);
+  }
+
+  /**
+   * Lazily load a weekly report's rendered body. Kept out of the eager index:
+   * ~30 kB of HTML per week, read on one page only.
+   */
+  async loadWeeklyBody(id: string): Promise<string | null> {
+    const loader = weeklyLoaders[id];
+    if (!loader) return null;
+    const mod = await loader();
+    return mod.default.html;
   }
 }

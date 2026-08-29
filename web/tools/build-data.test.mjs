@@ -13,8 +13,12 @@ import {
   defaultMonogram,
   readingMinutes,
   firstSentence,
+  firstParagraph,
   buildRegistry,
   extractWeekId,
+  isoWeekRange,
+  domainOf,
+  flattenSubjects,
   renderMarkdown,
   disposeHighlighter
 } from './build-data.mjs';
@@ -177,4 +181,91 @@ test('renderMarkdown: a fence without a language keeps default code rendering', 
   assert.match(html, /<pre><code/);
   assert.ok(!html.includes('class="shiki'));
   assert.ok(!html.includes('class="mermaid"'));
+});
+
+// ---------------------------------------------------------------------------
+// Semaines ISO, domaines et aplatissement des sujets (ajouts de la refonte)
+// ---------------------------------------------------------------------------
+
+test('isoWeekRange: rend le lundi et le dimanche de la semaine ISO', () => {
+  // W25 2026 est déclarée en frontmatter comme 2026-06-15/2026-06-21.
+  assert.deepEqual(isoWeekRange('2026-W25'), { start: '2026-06-15', end: '2026-06-21' });
+  // Semaine 1 : elle contient toujours le 4 janvier.
+  const w1 = isoWeekRange('2026-W01');
+  assert.ok(w1 && w1.start <= '2026-01-04' && '2026-01-04' <= w1.end);
+  // Une année à 53 semaines reste dans les clous (2020 en a 53).
+  assert.deepEqual(isoWeekRange('2020-W53'), { start: '2020-12-28', end: '2021-01-03' });
+});
+
+test('isoWeekRange: rejette un identifiant qui n’est pas une semaine ISO', () => {
+  assert.equal(isoWeekRange('2026-06-15'), null);
+  assert.equal(isoWeekRange('W25'), null);
+});
+
+test('domainOf: extrait le hostname, sans www., et tolère une URL illisible', () => {
+  assert.equal(domainOf('https://www.infoq.com/news/x/'), 'infoq.com');
+  assert.equal(domainOf('https://hf.co/Qwen'), 'hf.co');
+  assert.equal(domainOf(undefined), undefined);
+  assert.equal(domainOf('pas une url'), undefined);
+});
+
+test('firstParagraph: isole le premier <p>, sinon rend le fragment entier', () => {
+  assert.equal(firstParagraph('<h2>Titre</h2><p>Corps.</p><p>Suite.</p>'), 'Corps.');
+  assert.equal(firstParagraph('<ul><li>a</li></ul>'), '<ul><li>a</li></ul>');
+});
+
+test('flattenSubjects: aplatit, agrège le temps de lecture et retient le premier sujet', () => {
+  const registry = new Map([
+    ['IA', { slug: 'ia', monogram: 'AI' }],
+    ['Tech', { slug: 'tech', monogram: 'T' }]
+  ]);
+  const rendered = {
+    date: '2026-06-20',
+    categories: [
+      {
+        category: 'IA',
+        syntheseHtml: '<h2>Digest</h2><p>Première phrase. Deuxième.</p>',
+        detailMinutes: 5,
+        detailSnippets: [
+          {
+            index: '1',
+            title: 'Un sujet',
+            source: 'Hugging Face',
+            sourceUrl: 'https://hf.co/a',
+            readingMinutes: 3
+          }
+        ]
+      },
+      {
+        category: 'Tech',
+        syntheseHtml: '<p>Autre.</p>',
+        detailMinutes: 4,
+        detailSnippets: [
+          { index: '1', title: 'Deux', readingMinutes: 2 },
+          { index: '2', title: 'Trois', readingMinutes: 2 }
+        ]
+      }
+    ]
+  };
+
+  const flat = flattenSubjects(rendered, registry);
+
+  assert.equal(flat.subjects.length, 3);
+  assert.equal(flat.readingMinutes, 9);
+  assert.equal(flat.firstSubject, 'ia-1');
+  assert.equal(flat.subjects[0].domain, 'hf.co');
+  assert.equal(flat.subjects[0].mono, 'AI');
+  // L'accroche vient de la catégorie qui porte le plus de sujets (Tech, 2 > 1).
+  assert.equal(flat.headline, 'Autre.');
+});
+
+test('flattenSubjects: une journée sans sujet détaillé ne pose pas de firstSubject', () => {
+  const flat = flattenSubjects(
+    { date: '2026-06-20', categories: [{ category: 'IA', syntheseHtml: '<p>Rien.</p>' }] },
+    new Map([['IA', { slug: 'ia', monogram: 'AI' }]])
+  );
+
+  assert.equal(flat.subjects.length, 0);
+  assert.equal(flat.firstSubject, undefined);
+  assert.equal(flat.readingMinutes, 0);
 });

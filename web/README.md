@@ -64,6 +64,33 @@ the ISO week id from the filename (overridable via optional `week`/`range` front
 newest-first `weeklies` list. Surfaced at `/rapports` (list) and `/rapports/:week` (one report,
 rendered via `MarkdownComponent`).
 
+## Local environment
+
+Docker, from the **repo root** (the build context is the root: the generator reads `report/`):
+
+```bash
+docker compose up --build   # → http://localhost:4200
+```
+
+Two stages: a throwaway Node stage runs `npm run build` (generator + prerender), then
+`nginx:alpine-slim` serves `dist/veille/browser`. Final image **~43 MB**. No dev server and no
+bind mount — rebuild after each change. In exchange, what you browse locally is byte-for-byte what
+production serves, under the same headers.
+
+`web/docker/nginx.conf` mirrors `config/veille-le-ssl.conf.template`: SPA fallback, the strict CSP,
+`immutable` caching on hashed assets, `no-cache` on `index.html`. Two nginx specifics worth knowing:
+
+- `absolute_redirect off` — otherwise a directory request is answered with a 301 rebuilt from the
+  internal listen port (80), which breaks behind the `4200:80` publish.
+- `try_files $uri $uri/index.html` rather than `$uri/` — serves the prerendered directory index
+  without a trailing-slash redirect.
+- `add_header` does not inherit into a `location` that declares one, hence the shared
+  `security-headers.conf` included in each block.
+
+Without Docker: `npm install && npm run generate && npm start` for a dev server with hot reload.
+**`npm run generate` is required first** — `ng serve` does not trigger the `prebuild` hook, and
+`src/app/data/generated/` is git-ignored, so a fresh clone has nothing to import.
+
 ## Scripts
 
 ```bash
@@ -86,23 +113,39 @@ npm run lighthouse      # @lhci/cli autorun against the built static site
 ## Architecture
 
 ```
+src/
+  styles.css                        # 3 layers: Établi tokens, legacy bridge, shared app chrome
+  styles/
+    tokens/*.css                    # Établi design tokens (verbatim vendoring)
+    etabli-ui.css                   # Établi component classes (.etb-*)
 src/app/
-  app.ts / app.html / app.css       # shell: skip-link, sticky header, nav, theme toggle, footer
+  app.ts / app.html / app.css       # shell: 48px top bar, 236px rail, 26px status bar
   app.routes.ts                     # lazy routes
   app.routes.server.ts              # prerender params (getPrerenderParams) for :date / :week
+  ui/                               # Établi primitives, Angular side
+    icon (+ icon.data.ts) / button / icon-button / badge / kbd
+    callout / key-value-list / panel / segmented-control
+  layout/
+    shell-nav.component.ts          # grouped rail, rendered in the rail and the mobile drawer
+    command-palette.component.ts    # ⌘K: subject titles first, then full text
   core/
     date.util.ts / date.pipe.ts     # single FR date utility + `frDate` pipe
+    content.util.ts                 # anchors/TOC, code-only view, links, first sentence
+    source.util.ts                  # source domain extraction
     theme.service.ts                # dark/light, localStorage 'veille-theme', data-theme attr
     seen.service.ts                 # "new" tracking, localStorage 'veille-last-seen-date'
     search.service.ts               # lazy search-index.json, <mark> snippet building
+    subject-index.service.ts        # lazy subject-index.json, title search
     digest-store.service.ts         # reads index.ts, lazy-loads via loaders.ts
   shared/
     markdown.component.ts           # [innerHTML] + bypassSecurityTrustHtml (content pre-sanitized)
-    heatmap / bar-chart / line-chart # SVG charts
+    heatmap / bar-chart / line-chart / donut  # SVG charts
   features/
-    home/                           # SearchBox + DigestCard + results
-    digest/                         # DigestPage → DigestTabs → DetailSnippet
-    stats/                          # KPI grid + 3 charts
+    briefing/                       # BriefingPage → BriefingView | SubjectReader (?sujet=)
+    fil/                            # every subject, filtered by theme and period
+    jours/                          # day history, one generated headline per digest
+    stats/                          # KPI grid + 3 panels
+    stats-perso/                    # local read tracking
     rapports/                       # weekly list + per-week report (markdown)
   data/
     types.ts                        # shared data contract
@@ -112,5 +155,12 @@ tools/
     build-data.test.mjs             # node:test helper specs
 ```
 
-Theme variables, dark/light palettes and `.markdown` typography are ported verbatim into
-`src/styles.css`.
+`/digest/:date` renders the day's briefing; `?sujet=<slug>-<index>` switches the same route to
+the subject reader. That keeps a shareable permalink per subject without prerendering one page
+per subject (426 today) — only the 71 days are prerendered.
+
+`src/styles.css` layers the Établi design system over a bridge of legacy aliases (`--bg`,
+`--accent`, `--cat-*`, `--heatmap-*`) that TypeScript still builds by string interpolation
+(`DigestStore.accentFor`, `HeatmapComponent.levelFor`). Renaming those breaks code, not just CSS.
+Shared screen chrome (`.screen*`, `.side-panel`, `.kpi*`, `.row-card`) lives there too: the
+`anyComponentStyle` budget caps each component stylesheet at 8 kB.

@@ -1,18 +1,22 @@
-// Central route list for smoke + a11y specs. Supports skipping routes in CI
-// via the comma-separated E2E_EXCLUDE_ROUTES env var (matched by path prefix).
+// Liste centrale des routes pour les specs smoke / a11y / responsive.
+// `E2E_EXCLUDE_ROUTES` (séparé par des virgules, match par préfixe) permet d'en
+// écarter en CI.
 
 export interface RouteSpec {
   path: string;
+  /** Doit correspondre au `<h1>` de la page — asserté par smoke.spec.ts. */
   heading: RegExp;
 }
 
 const ALL_ROUTES: RouteSpec[] = [
-  { path: '/', heading: /Digests quotidiens/i },
-  { path: '/stats', heading: /Statistiques/i },
-  { path: '/stats-perso', heading: /Mes stats/i },
+  { path: '/', heading: /Briefing du/i },
+  { path: '/fil', heading: /Tous les sujets/i },
+  { path: '/jours', heading: /Par jour/i },
   { path: '/rapports', heading: /Rapports hebdomadaires/i },
-  { path: '/rapports/2026-W24', heading: /W24/i },
-  { path: '/digest/2026-06-20', heading: /./ }
+  { path: '/rapports/2026-W24', heading: /./ },
+  { path: '/stats', heading: /Régularité/i },
+  { path: '/stats-perso', heading: /Ma lecture/i },
+  { path: '/digest/2026-06-20', heading: /Briefing du/i }
 ];
 
 export function activeRoutes(): RouteSpec[] {

@@ -4,6 +4,8 @@
       "staticDistDir": "dist/veille/browser",
       "url": [
         "http://localhost/index.html",
+        "http://localhost/fil/index.html",
+        "http://localhost/jours/index.html",
         "http://localhost/stats/index.html",
         "http://localhost/rapports/index.html",
         "http://localhost/digest/2026-06-20/index.html"

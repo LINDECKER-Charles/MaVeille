@@ -1,247 +1,142 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  OnInit,
-  computed,
-  inject,
-  isDevMode,
-  signal
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, isDevMode, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { Title } from '@angular/platform-browser';
+import { PageMetaService } from '../../core/page-meta.service';
 import { DigestStore } from '../../core/digest-store.service';
 import { MarkdownComponent } from '../../shared/markdown.component';
 import { SpeakerPlayerComponent } from '../../shared/speaker-player.component';
 import { DonutComponent, type DonutSegment } from '../../shared/donut.component';
+import { BadgeComponent } from '../../ui/badge.component';
+import { IconComponent } from '../../ui/icon.component';
+import { PanelComponent } from '../../ui/panel.component';
 import { formatFrRange, resolveCurrentWeekId } from './rapports-list.component';
 import type { WeeklyReport } from '../../data/types';
 
+/** Une ligne de la répartition par thématique du rapport. */
 interface DistRow {
-  label: string;
-  count: number;
-  pct: number;
-  color: string;
+  readonly label: string;
+  readonly count: number;
+  readonly pct: number;
+  readonly color: string;
 }
 
+/** Un rapport hebdomadaire : la synthèse, et où est allé l'effort de la semaine. */
 @Component({
   selector: 'app-rapport-detail',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, MarkdownComponent, DonutComponent, SpeakerPlayerComponent],
+  imports: [
+    RouterLink,
+    MarkdownComponent,
+    DonutComponent,
+    SpeakerPlayerComponent,
+    BadgeComponent,
+    IconComponent,
+    PanelComponent
+  ],
+  styleUrl: './rapport-detail.component.css',
   template: `
-    <article class="doc">
-      <nav class="breadcrumb" aria-label="Fil d'Ariane">
-        <a routerLink="/rapports">← Tous les rapports</a>
+    <div class="screen">
+      <nav class="etb-crumbs rapport__crumbs" aria-label="Fil d'Ariane">
+        <a routerLink="/rapports">Rapports hebdomadaires</a>
+        <span aria-hidden="true">/</span>
+        <span class="etb-crumbs__current">{{ weekId() }}</span>
       </nav>
 
       @if (report(); as r) {
-        <p class="meta">
-          <span class="id">{{ r.id }}</span>
-          @if (range(); as rg) {
-            <span class="range">{{ rg }}</span>
-          }
-          @if (isCurrent()) {
-            <span class="badge-current">EN COURS</span>
-          }
-        </p>
-
-        <h1>{{ r.title }}</h1>
-
-        <!-- Lecture vocale — dev uniquement : @if(isDev) → zéro empreinte en prod. -->
-        @if (isDev) {
-          <app-speaker-player [veilleId]="'weekly/' + r.id + '_weekly'" />
-        }
-
-        @if (distribution(); as dist) {
-          <section class="effort" aria-labelledby="effort-h">
-            <h2 id="effort-h">Où est allé l'effort</h2>
-            <div class="effort-body">
-              <app-donut [segments]="segments()" [centerLabel]="'sujets'" />
-              <ul class="dist" aria-label="Répartition des sujets par catégorie">
-                @for (d of dist; track d.label) {
-                  <li>
-                    <span class="dot" [style.background]="d.color" aria-hidden="true"></span>
-                    <span class="dist-label">{{ d.label }}</span>
-                    <span class="dist-count">{{ d.count }} sujets</span>
-                    <span class="dist-pct">{{ d.pct }}%</span>
-                  </li>
-                }
-              </ul>
+        <div class="screen__head">
+          <span class="screen__glyph"><app-icon name="folder" [size]="17" /></span>
+          <div class="screen__heading">
+            <h1 class="screen__title rapport__title">{{ r.title }}</h1>
+            <div class="rapport__meta">
+              <app-badge size="sm" [mono]="true" tone="info">{{ r.id }}</app-badge>
+              @if (range(); as rg) {
+                <span class="rapport__range">{{ rg }}</span>
+              }
+              @if (isCurrent()) {
+                <app-badge size="sm" tone="brand">En cours</app-badge>
+              }
             </div>
-          </section>
-        }
+          </div>
+        </div>
 
-        <app-markdown [html]="r.html" />
-      } @else if (notFound()) {
-        <div class="not-found">
-          <h1>Rapport introuvable</h1>
-          <p class="sub">Aucun rapport ne correspond à cette semaine.</p>
-          <a class="back" routerLink="/rapports">← Revenir aux rapports</a>
+        <div class="screen__split">
+          <div class="screen__body">
+            <div class="prose-col">
+              <!-- Lecture vocale — dev uniquement : @if(isDev) → zéro empreinte en prod. -->
+              @if (isDev) {
+                <app-speaker-player [veilleId]="'weekly/' + r.id + '_weekly'" />
+              }
+              <app-markdown [html]="body()" />
+            </div>
+          </div>
+
+          <aside class="side-panel" aria-label="Contexte de la semaine">
+            @if (distribution(); as dist) {
+              <app-panel [title]="effortTitle" icon="database">
+                <div class="effort">
+                  <app-donut [segments]="segments()" [size]="120" centerLabel="sujets" />
+                  <ul class="dist" aria-label="Répartition des sujets par thématique">
+                    @for (d of dist; track d.label) {
+                      <li>
+                        <span class="dist__dot" [style.background]="d.color" aria-hidden="true"></span>
+                        <span class="dist__label">{{ d.label }}</span>
+                        <span class="dist__count">{{ d.count }}</span>
+                        <span class="dist__pct">{{ d.pct }}%</span>
+                      </li>
+                    }
+                  </ul>
+                </div>
+              </app-panel>
+            }
+
+            @if (siblings().length) {
+              <div>
+                <div class="panel-label"><span>Autres semaines</span></div>
+                <div class="weeks">
+                  @for (w of siblings(); track w.id) {
+                    <a class="week" [routerLink]="['/rapports', w.id]">
+                      <span class="week__id">{{ w.id }}</span>
+                      <span class="week__title">{{ w.title }}</span>
+                    </a>
+                  }
+                </div>
+              </div>
+            }
+          </aside>
+        </div>
+      } @else {
+        <div class="screen__head">
+          <div class="screen__heading">
+            <h1 class="screen__title">Rapport introuvable</h1>
+            <div class="screen__sub">Aucun rapport ne correspond à cette semaine.</div>
+          </div>
+        </div>
+        <div class="screen__body">
+          <a class="etb-btn etb-btn--secondary etb-btn--sm" routerLink="/rapports">
+            <app-icon name="chevron-left" [size]="14" />
+            Revenir aux rapports
+          </a>
         </div>
       }
-    </article>
-  `,
-  styles: [
-    `
-      :host {
-        display: block;
-        padding: 40px 24px 90px;
-      }
-      @media (max-width: 600px) {
-        :host { padding: 28px 16px 64px; }
-      }
-      .doc {
-        max-width: 760px;
-        margin: 0 auto;
-      }
-      .breadcrumb {
-        margin-bottom: 1.75rem;
-        font-size: 13px;
-      }
-      .breadcrumb a {
-        color: var(--faint, var(--text-dim));
-        border-bottom: none;
-      }
-      .breadcrumb a:hover {
-        color: var(--brand, var(--accent));
-      }
-      .breadcrumb a:focus-visible {
-        outline: 2px solid var(--brand, var(--accent));
-        outline-offset: 2px;
-        border-radius: 3px;
-      }
-      .meta {
-        display: flex;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 0.65rem;
-        margin: 0 0 0.85rem;
-      }
-      .id {
-        font-family: var(--font-mono);
-        font-size: 12px;
-        font-weight: 600;
-        color: var(--brand, var(--accent));
-        background: var(--brand-soft, var(--accent-soft));
-        border-radius: 999px;
-        padding: 2px 9px;
-        font-variant-numeric: tabular-nums;
-      }
-      .range {
-        font-family: var(--font-mono);
-        font-size: 12px;
-        color: var(--faint, var(--text-dim));
-        font-variant-numeric: tabular-nums;
-      }
-      .badge-current {
-        font-family: var(--font-mono);
-        font-size: 10.5px;
-        font-weight: 700;
-        letter-spacing: 0.04em;
-        color: var(--high, var(--accent));
-        border: 1px solid var(--high, var(--accent));
-        border-radius: 999px;
-        padding: 1px 8px;
-      }
-      h1 {
-        margin: 0 0 1.75rem;
-        font-size: 38px;
-        font-weight: 800;
-        letter-spacing: -0.03em;
-        line-height: 1.1;
-      }
-      .effort {
-        background: var(--surface, var(--bg-elevated));
-        border: 1px solid var(--border);
-        border-radius: 14px;
-        padding: 24px;
-        margin: 0 0 2.25rem;
-      }
-      .effort h2 {
-        margin: 0 0 1.1rem;
-        font-size: 17px;
-        font-weight: 700;
-        letter-spacing: -0.01em;
-      }
-      .effort-body {
-        display: flex;
-        align-items: center;
-        gap: 32px;
-      }
-      .dist {
-        list-style: none;
-        margin: 0;
-        padding: 0;
-        flex: 1;
-        min-width: 0;
-        display: flex;
-        flex-direction: column;
-        gap: 0.55rem;
-      }
-      .dist li {
-        display: flex;
-        align-items: center;
-        gap: 0.6rem;
-        font-size: 14px;
-      }
-      .dot {
-        flex: none;
-        width: 11px;
-        height: 11px;
-        border-radius: 4px;
-      }
-      .dist-label {
-        font-weight: 500;
-      }
-      .dist-count {
-        margin-left: auto;
-        color: var(--muted, var(--text-muted));
-        font-variant-numeric: tabular-nums;
-      }
-      .dist-pct {
-        width: 38px;
-        text-align: right;
-        color: var(--faint, var(--text-dim));
-        font-variant-numeric: tabular-nums;
-      }
-      .not-found {
-        padding: 2rem 0;
-      }
-      .not-found h1 {
-        margin-bottom: 0.5rem;
-      }
-      .not-found .sub {
-        margin: 0 0 1.25rem;
-        color: var(--muted, var(--text-muted));
-      }
-      .not-found .back {
-        color: var(--brand, var(--accent));
-        font-size: 14px;
-        border-bottom: none;
-      }
-      @media (max-width: 720px) {
-        .effort-body {
-          flex-direction: column;
-          align-items: stretch;
-          gap: 20px;
-        }
-        h1 {
-          font-size: 30px;
-        }
-      }
-    `
-  ]
+    </div>
+  `
 })
-export class RapportDetailComponent implements OnInit {
+export class RapportDetailComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly store = inject(DigestStore);
-  private readonly title = inject(Title);
+  private readonly pageMeta = inject(PageMetaService);
 
   /** Vrai en `ng serve` / dev, faux en build prod → aucune empreinte en production. */
   readonly isDev = isDevMode();
 
+  /** Espace insécable avant le « ? », comme partout ailleurs dans l'app. */
+  protected readonly effortTitle = "Où est allé l'effort ?";
+
   readonly report = signal<WeeklyReport | null>(null);
-  readonly notFound = signal(false);
+  readonly weekId = signal('');
+  /** Corps du rapport, chargé à la demande (hors bundle initial). */
+  readonly body = signal('');
 
   readonly range = computed<string | null>(() => {
     const r = this.report();
@@ -271,19 +166,27 @@ export class RapportDetailComponent implements OnInit {
     () => this.distribution()?.map((d) => ({ label: d.label, value: d.count, color: d.color })) ?? []
   );
 
-  ngOnInit(): void {
-    this.route.paramMap.subscribe((params) => {
-      const id = params.get('week')!;
+  /** Les quatre semaines voisines, pour naviguer sans repasser par la liste. */
+  readonly siblings = computed(() => {
+    const id = this.weekId();
+    const at = this.store.weeklies.findIndex((w) => w.id === id);
+    if (at === -1) return [];
+    const from = Math.max(0, at - 2);
+    return this.store.weeklies.slice(from, from + 5).filter((w) => w.id !== id);
+  });
+
+  constructor() {
+    this.route.paramMap.pipe(takeUntilDestroyed()).subscribe((params) => {
+      const id = params.get('week') ?? '';
+      this.weekId.set(id);
+      this.body.set('');
       const report = this.store.weekly(id);
-      if (!report) {
-        this.report.set(null);
-        this.notFound.set(true);
-        this.title.setTitle('Veille — Rapport introuvable');
-        return;
-      }
-      this.title.setTitle(`Veille — ${report.title}`);
-      this.report.set(report);
-      this.notFound.set(false);
+      this.report.set(report ?? null);
+      this.pageMeta.set(
+        report?.title ?? 'Rapport introuvable',
+        report?.excerpt ?? "Aucun rapport ne correspond à cette semaine."
+      );
+      if (report) void this.store.loadWeeklyBody(id).then((html) => this.body.set(html ?? ''));
     });
   }
 }
